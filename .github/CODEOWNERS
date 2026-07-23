@@ -1,0 +1,8 @@
+# 将 YOUR_GITHUB_USERNAME 替换为项目负责人真实 GitHub 用户名
+* @YOUR_GITHUB_USERNAME
+/backend/app/core/ @YOUR_GITHUB_USERNAME
+/backend/app/models/ @YOUR_GITHUB_USERNAME
+/backend/alembic/ @YOUR_GITHUB_USERNAME
+/docker-compose.yml @YOUR_GITHUB_USERNAME
+/.github/ @YOUR_GITHUB_USERNAME
+

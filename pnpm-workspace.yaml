@@ -1,0 +1,7 @@
+packages:
+  - frontend-user
+  - frontend-admin
+
+allowBuilds:
+  esbuild: true
+  vue-demi: true

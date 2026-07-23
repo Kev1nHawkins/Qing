@@ -1,0 +1,42 @@
+name: 功能任务
+description: 新功能、联调或演示内容任务
+title: "[P0][模块] "
+labels: ["feature"]
+body:
+  - type: input
+    id: owner
+    attributes:
+      label: 负责人
+    validations:
+      required: true
+  - type: input
+    id: deadline
+    attributes:
+      label: 截止日期
+      placeholder: 2026-07-27
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标与范围
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 前置依赖
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收步骤
+      placeholder: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图、接口返回或录屏
+

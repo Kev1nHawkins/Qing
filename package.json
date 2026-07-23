@@ -1,0 +1,13 @@
+{
+  "name": "lingchao-co-create",
+  "version": "0.1.0",
+  "private": true,
+  "description": "岭南文化与校园文化 AI 共创传播平台",
+  "scripts": {
+    "dev": "docker compose up",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "build": "docker compose build"
+  }
+}
+
