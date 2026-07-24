@@ -91,24 +91,31 @@ $process = Start-Process `
     -RedirectStandardError $stderrLog `
     -PassThru
 
-[ordered]@{
-    pid = $process.Id
-    repoRoot = $RepoRoot
-    backendRoot = $BackendRoot
-    startedAt = (Get-Date).ToString("o")
-    stdoutLog = $stdoutLog
-    stderrLog = $stderrLog
-} | ConvertTo-Json | Set-Content -LiteralPath $PidFile -Encoding UTF8
-
 $started = $false
+$listenerPid = $null
+$listenerProcess = $null
+$foreignListener = $false
+$backendPattern = [regex]::Escape($BackendRoot)
 for ($attempt = 1; $attempt -le 30; $attempt++) {
-    if ($process.HasExited) {
-        break
-    }
-    $listener = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue |
-        Where-Object OwningProcess -eq $process.Id |
+    $listener = Get-NetTCPConnection `
+        -LocalAddress "127.0.0.1" `
+        -LocalPort 8000 `
+        -State Listen `
+        -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if ($listener) {
+        $listenerPid = [int]$listener.OwningProcess
+        $listenerProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$listenerPid"
+        $command = [string]$listenerProcess.CommandLine
+        if (
+            $listenerProcess.Name -ne "python.exe" -or
+            $command -notmatch 'uvicorn' -or
+            $command -notmatch 'app\.main:app' -or
+            $command -notmatch $backendPattern
+        ) {
+            $foreignListener = $true
+            break
+        }
         $started = $true
         break
     }
@@ -116,15 +123,31 @@ for ($attempt = 1; $attempt -le 30; $attempt++) {
 }
 
 if (-not $started) {
-    if (-not $process.HasExited) {
+    if (
+        -not $foreignListener -and
+        -not $process.HasExited
+    ) {
         Stop-Process -Id $process.Id
     }
     Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
     $tail = if (Test-Path -LiteralPath $stderrLog) {
         Get-Content -LiteralPath $stderrLog -Tail 100
     }
-    throw "Uvicorn did not listen on port 8000 within 60 seconds. stderr:`n$($tail -join "`n")"
+    if ($foreignListener) {
+        throw "Port 8000 is owned by a process that does not match this project; it was not stopped."
+    }
+    throw "This project's Uvicorn did not listen on port 8000 within 60 seconds. stderr:`n$($tail -join "`n")"
 }
+
+[ordered]@{
+    pid = $listenerPid
+    launcherPid = $process.Id
+    repoRoot = $RepoRoot
+    backendRoot = $BackendRoot
+    startedAt = (Get-Date).ToString("o")
+    stdoutLog = $stdoutLog
+    stderrLog = $stderrLog
+} | ConvertTo-Json | Set-Content -LiteralPath $PidFile -Encoding UTF8
 
 $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -TimeoutSec 10
 if ($health.code -ne 0) {
@@ -132,7 +155,8 @@ if ($health.code -ne 0) {
 }
 
 Write-Host "Lingchao host backend started."
-Write-Host "PID: $($process.Id)"
+Write-Host "PID: $listenerPid"
+Write-Host "Launcher PID: $($process.Id)"
 Write-Host "Health: http://127.0.0.1:8000/health"
 Write-Host "Swagger: http://127.0.0.1:8000/docs"
 Write-Host "Stop command: .\scripts\demo-stop-host.ps1"
