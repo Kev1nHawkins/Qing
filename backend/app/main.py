@@ -5,6 +5,7 @@ from uuid import uuid4
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -45,6 +46,7 @@ app.add_middleware(
 )
 register_exception_handlers(app)
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.mount("/uploads", StaticFiles(directory="/app/uploads", check_dir=False), name="uploads")
 
 
 @app.get("/health", tags=["System"], summary="服务健康检查")

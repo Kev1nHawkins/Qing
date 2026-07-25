@@ -99,16 +99,18 @@ async def complete_task(
             and task.correct_answer
             and payload.answer.strip() == task.correct_answer.strip()
         )
-    elif task.task_type == TaskType.QR_CODE.value:
-        is_correct = bool(payload.qr_code and payload.qr_code == task.qr_code)
-    elif task.task_type == TaskType.SIMULATED_LOCATION.value:
-        is_correct = payload.latitude is not None and payload.longitude is not None
+    else:
+        # 兼容数据库中的旧二维码/定位类型，所有非问答任务统一按图片打卡处理。
+        is_correct = bool(
+            payload.answer and payload.answer.startswith("PHOTO:/uploads/task-checkins/")
+        )
     if not is_correct:
-        raise HTTPException(status_code=400, detail="任务验证未通过，请检查答案或打卡信息")
+        raise HTTPException(status_code=400, detail="任务验证未通过，请检查答案或上传现场图片")
 
     record = existing or UserTaskRecord(user_id=current_user.id, task_id=task_id)
     record.status = TaskStatus.COMPLETED.value
-    record.answer = payload.answer
+    if payload.answer:
+        record.answer = payload.answer
     record.is_correct = True
     record.completed_at = datetime.now(UTC)
     record.awarded_points = task.points
@@ -130,7 +132,7 @@ async def complete_task(
             "awardedPoints": task.points,
             "pointsTotal": current_user.points_total,
             "alreadyCompleted": False,
+            "distanceMeters": None,
         },
         "任务完成",
     )
-

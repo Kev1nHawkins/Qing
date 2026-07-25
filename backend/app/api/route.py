@@ -41,6 +41,61 @@ async def get_route(route_id: int, db: DbSession) -> dict:
     return success(data)
 
 
+@router.get("/{route_id}/progress", summary="我的路线进度")
+async def get_route_progress(
+    route_id: int, db: DbSession, current_user: CurrentUser
+) -> dict:
+    await get_or_404(db, Route, route_id, "寻迹路线")
+    tasks = (
+        await db.scalars(
+            select(RouteTask)
+            .where(RouteTask.route_id == route_id)
+            .order_by(RouteTask.order_no)
+        )
+    ).all()
+    task_ids = [task.id for task in tasks]
+    records = []
+    if task_ids:
+        records = list(
+            (
+                await db.scalars(
+                    select(UserTaskRecord)
+                    .where(
+                        UserTaskRecord.user_id == current_user.id,
+                        UserTaskRecord.task_id.in_(task_ids),
+                    )
+                    .order_by(UserTaskRecord.task_id)
+                )
+            ).all()
+        )
+    completed_ids = [
+        record.task_id for record in records if record.status == "COMPLETED"
+    ]
+    total = len(tasks)
+    completed = len(completed_ids)
+    return success(
+        {
+            "routeId": route_id,
+            "started": bool(records),
+            "totalTasks": total,
+            "completedTasks": completed,
+            "progressPercent": round(completed * 100 / total) if total else 0,
+            "completedTaskIds": completed_ids,
+            "records": [
+                {
+                    "recordId": record.id,
+                    "taskId": record.task_id,
+                    "status": record.status,
+                    "awardedPoints": record.awarded_points,
+                    "completedAt": record.completed_at,
+                    "answer": record.answer,
+                }
+                for record in records
+            ],
+        }
+    )
+
+
 @router.post("/{route_id}/start", summary="开始路线（幂等）")
 async def start_route(
     route_id: int, db: DbSession, current_user: CurrentUser

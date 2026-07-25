@@ -41,7 +41,7 @@
 | Community | `/community` | 帖子、评论、点赞、收藏 |
 | Points | `/points` | 积分概览与流水 |
 | Badge | `/badges` | 徽章与用户徽章 |
+| Upload | `/uploads/images` | 鉴权图片上传，供任务图片打卡复用 |
 | Admin | `/admin` | 看板、用户、帖子审核、积分调整 |
 
 接口和字段的唯一可执行定义是运行中的 OpenAPI：`/openapi.json`。接口变更必须先更新本目录文档并在 PR 中标注。
-

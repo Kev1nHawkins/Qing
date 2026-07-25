@@ -1,15 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
+import ExperienceView from '@/views/ExperienceView.vue'
 
 export default createRouter({
   history: createWebHistory(),
+  scrollBehavior: () => ({ top: 0 }),
   routes: [
-    { path: '/', component: HomeView },
-    { path: '/cultures', component: () => import('@/views/CultureView.vue') },
-    { path: '/routes', component: () => import('@/views/RouteView.vue') },
-    { path: '/community', component: () => import('@/views/CommunityView.vue') },
-    { path: '/profile', component: () => import('@/views/ProfileView.vue') },
-    { path: '/login', component: () => import('@/views/LoginView.vue') },
+    { path: '/', name: 'home', component: ExperienceView },
+    { path: '/cultures', name: 'cultures', component: ExperienceView },
+    { path: '/cultures/:slug', name: 'culture-detail', component: ExperienceView },
+    { path: '/routes', name: 'routes', component: ExperienceView },
+    { path: '/guide', name: 'guide', component: ExperienceView },
+    { path: '/create', name: 'create', component: ExperienceView },
+    { path: '/community', name: 'community', component: ExperienceView },
+    { path: '/profile', name: 'profile', component: ExperienceView },
+    { path: '/login', redirect: { name: 'profile' } },
+    { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
   ],
 })
-
