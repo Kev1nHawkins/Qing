@@ -1,15 +1,19 @@
+import hashlib
+import hmac
+
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.api.helpers import paginated
+from app.core.config import settings
 from app.core.response import success
-from app.models.enums import PointReason
 from app.models.points import PointRecord
 from app.models.user import User
 from app.schemas.points import PointRead, PointRedeemRequest
 
 router = APIRouter(prefix="/points", tags=["Points"])
+REWARD_REDEEM_REASON = "REWARD_REDEEM"
 
 SHOP_PRODUCTS = [
     {
@@ -221,7 +225,7 @@ def redemption_item(record: PointRecord) -> dict:
         return {
             "recordId": record.id,
             "redemptionId": redemption_id,
-            "voucherCode": f"LC-{record.id:06d}",
+            "voucherCode": redemption_voucher(record),
             "productCode": product["code"],
             "productName": product["name"],
             "subtitle": product["subtitle"],
@@ -237,7 +241,7 @@ def redemption_item(record: PointRecord) -> dict:
     return {
         "recordId": record.id,
         "redemptionId": redemption_id,
-        "voucherCode": f"LC-{record.id:06d}",
+        "voucherCode": redemption_voucher(record),
         "productCode": product_code,
         "productName": record.description.removeprefix("兑换商品："),
         "subtitle": "历史兑换商品",
@@ -254,6 +258,16 @@ def redemption_item(record: PointRecord) -> dict:
         "actionLabel": "查看兑换凭证",
         "instruction": "该商品已下架，请凭兑换码联系活动服务台核验处理。",
     }
+
+
+def redemption_voucher(record: PointRecord) -> str:
+    message = f"{record.user_id}:{record.id}:{record.business_key}".encode()
+    digest = hmac.new(
+        settings.jwt_secret_key.encode(),
+        message,
+        hashlib.sha256,
+    ).hexdigest()[:12]
+    return f"LC-{digest.upper()}"
 
 
 @router.get("/shop", summary="积分商城商品")
@@ -283,7 +297,7 @@ async def point_redemptions(
 ) -> dict:
     filters = [
         PointRecord.user_id == current_user.id,
-        PointRecord.reason_type == PointReason.REWARD_REDEEM.value,
+        PointRecord.reason_type == REWARD_REDEEM_REASON,
         PointRecord.business_key.like("redeem:%"),
     ]
     total = await db.scalar(select(func.count(PointRecord.id)).where(*filters))
@@ -343,6 +357,12 @@ async def redeem_product(
     if not product:
         raise HTTPException(status_code=404, detail="商品不存在或已下架")
 
+    user = await db.scalar(
+        select(User).where(User.id == current_user.id).with_for_update()
+    )
+    if not user:
+        raise HTTPException(status_code=401, detail="用户不存在")
+
     business_key = f"redeem:{product['code']}:{payload.redemption_id}"
     existing = await db.scalar(
         select(PointRecord).where(
@@ -357,7 +377,7 @@ async def redeem_product(
                 "productCode": product["code"],
                 "productName": product["name"],
                 "cost": product["points"],
-                "pointsTotal": existing.balance_after,
+                "pointsTotal": user.points_total,
                 "delivery": product["delivery"],
                 "alreadyRedeemed": True,
             },
@@ -374,11 +394,6 @@ async def redeem_product(
         if redeemed_once:
             raise HTTPException(status_code=409, detail="该商品每位用户限兑一次")
 
-    user = await db.scalar(
-        select(User).where(User.id == current_user.id).with_for_update()
-    )
-    if not user:
-        raise HTTPException(status_code=401, detail="用户不存在")
     cost = int(product["points"])
     if user.points_total < cost:
         raise HTTPException(
@@ -391,7 +406,7 @@ async def redeem_product(
         user_id=user.id,
         amount=-cost,
         balance_after=user.points_total,
-        reason_type=PointReason.REWARD_REDEEM.value,
+        reason_type=REWARD_REDEEM_REASON,
         reason_id=None,
         business_key=business_key,
         description=f"兑换商品：{product['name']}",

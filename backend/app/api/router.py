@@ -11,7 +11,6 @@ from app.api import (
     points,
     route,
     task,
-    upload,
 )
 
 api_router = APIRouter()
@@ -20,7 +19,6 @@ api_router.include_router(culture.router)
 api_router.include_router(location.router)
 api_router.include_router(route.router)
 api_router.include_router(task.router)
-api_router.include_router(upload.router)
 api_router.include_router(creation.router)
 api_router.include_router(community.router)
 api_router.include_router(points.router)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import CampusMap from '@/views/map/CampusMap.vue'
 import PointsMall from '@/views/points/PointsMall.vue'
 import TaskPanel from '@/views/task/TaskPanel.vue'
@@ -34,6 +34,7 @@ const busy = ref(false)
 const error = ref('')
 const toast = ref('')
 const unlockedBadge = ref<Badge>()
+const evidenceUrls = ref<Record<number, string>>({})
 
 const isLoggedIn = computed(() => Boolean(localStorage.getItem('accessToken')))
 const selectedRoute = computed(() => routes.value.find(item => item.id === selectedRouteId.value) || routes.value[0])
@@ -57,14 +58,24 @@ const completedRouteCount = computed(() =>
 )
 const photoFootprints = computed(() =>
   (selectedProgress.value?.records || [])
-    .filter(record => record.status === 'COMPLETED' && record.answer?.startsWith('PHOTO:'))
+    .filter(record => record.status === 'COMPLETED' && record.evidenceAssetId)
     .map(record => ({
       record,
       task: selectedRoute.value?.tasks?.find(task => task.id === record.taskId),
-      url: record.answer!.slice('PHOTO:'.length),
+      url: evidenceUrls.value[record.recordId],
     })),
 )
-const recentPointRecords = computed(() => pointRecords.value.slice(0, 5))
+const selectedRouteTaskIds = computed(() =>
+  new Set((selectedRoute.value?.tasks || []).map(task => task.id)),
+)
+const recentPointRecords = computed(() =>
+  pointRecords.value
+    .filter(record =>
+      record.reason_type === 'TASK_COMPLETE'
+      && selectedRouteTaskIds.value.has(Number(record.business_key?.replace('task:', ''))),
+    )
+    .slice(0, 5),
+)
 
 function formatRecordTime(value: string | null) {
   if (!value) return '刚刚'
@@ -119,6 +130,29 @@ async function refreshProgress() {
     routes.value.map(route => api.get<{ data: RouteProgress }>(`/routes/${route.id}/progress`)),
   )
   progress.value = Object.fromEntries(results.map(result => [result.data.data.routeId, result.data.data]))
+  await refreshEvidenceUrls()
+}
+
+async function refreshEvidenceUrls() {
+  Object.values(evidenceUrls.value).forEach(url => URL.revokeObjectURL(url))
+  evidenceUrls.value = {}
+  const evidenceRecords = Object.values(progress.value)
+    .flatMap(item => item.records)
+    .filter(record => record.evidenceAssetId)
+  const loaded = await Promise.allSettled(
+    evidenceRecords.map(async record => {
+      const response = await api.get(
+        `/tasks/${record.taskId}/evidence/${record.evidenceAssetId}`,
+        { responseType: 'blob' },
+      )
+      return [record.recordId, URL.createObjectURL(response.data)] as const
+    }),
+  )
+  evidenceUrls.value = Object.fromEntries(
+    loaded
+      .filter((item): item is PromiseFulfilledResult<readonly [number, string]> => item.status === 'fulfilled')
+      .map(item => item.value),
+  )
 }
 
 async function refreshAccount() {
@@ -176,10 +210,17 @@ async function completeTask(submission: TaskSubmission) {
   try {
     const payload = { ...submission.payload }
     if (submission.photo) {
-      const form = new FormData()
-      form.append('file', submission.photo)
-      const upload = await api.post<{ data: { url: string } }>('/uploads/images', form)
-      payload.answer = `PHOTO:${upload.data.data.url}`
+      const upload = await api.post<{ data: { id: number } }>(
+        `/tasks/${activeTask.value.id}/evidence`,
+        submission.photo,
+        {
+          headers: {
+            'Content-Type': submission.photo.type,
+            'X-File-Name': encodeURIComponent(submission.photo.name),
+          },
+        },
+      )
+      payload.file_asset_id = upload.data.data.id
     }
     const response = await api.post<{ data: TaskCompleteResult }>(
       `/tasks/${activeTask.value.id}/complete`,
@@ -206,20 +247,23 @@ watch(selectedRoute, route => {
   activeTaskId.value = undefined
 }, { immediate: true })
 onMounted(loadRoutes)
+onBeforeUnmount(() => {
+  Object.values(evidenceUrls.value).forEach(url => URL.revokeObjectURL(url))
+})
 </script>
 
 <template>
   <div class="route-journey">
     <section class="route-intro">
-      <div><p class="m2-kicker">CAMPUS CULTURE TRAIL</p><h1>校园文化寻迹</h1><p>三条校园路线连接文化讲解、现场观察、文化问答和图片打卡。选择路线后从地图任务点开始探索。</p></div>
+      <div><p class="m2-kicker">CAMPUS CULTURE TRAIL</p><h1>校园文化寻迹</h1><p>校园路线连接文化讲解、现场观察、文化问答和多种打卡方式。选择路线后从地图任务点开始探索。</p></div>
       <div class="journey-stats"><article><strong>{{ routes.length }}</strong><span>演示路线</span></article><article><strong>{{ totalTaskCount }}</strong><span>任务节点</span></article><article><strong>{{ pointsTotal }}</strong><span>我的积分</span></article></div>
     </section>
 
-    <div v-if="loading" class="journey-state">正在加载三条校园路线…</div>
+    <div v-if="loading" class="journey-state">正在加载校园路线…</div>
     <div v-else-if="error && !routes.length" class="journey-state error"><b>路线暂时无法加载</b><span>{{ error }}</span><button type="button" @click="loadRoutes">重新加载</button></div>
 
     <template v-else>
-      <section class="route-picker" aria-label="三条校园路线">
+      <section class="route-picker" aria-label="校园路线">
         <button v-for="item in routes" :key="item.id" type="button" :class="{ active: selectedRoute?.id === item.id }" @click="selectRoute(item)">
           <span>{{ String(routes.indexOf(item) + 1).padStart(2, '0') }}</span>
           <div><small>{{ item.distance_km }} KM · {{ item.duration_minutes }} MIN</small><h2>{{ item.title }}</h2><p>{{ item.summary }}</p></div>
@@ -254,7 +298,7 @@ onMounted(loadRoutes)
               <button type="button" @click="selectTask(task)">
                 <span>{{ completedTaskIds.includes(task.id) ? '✓' : String(task.order_no).padStart(2, '0') }}</span>
                 <div><b>{{ task.title }}</b><small>{{ locationMap.get(task.location_id)?.name }} · +{{ task.points }} 积分</small></div>
-                <em>{{ task.task_type === 'QUIZ' ? '问答' : '图片' }}</em>
+                <em>{{ task.task_type === 'QUIZ' ? '问答' : task.task_type === 'CHECK_IN' ? '图片' : task.task_type === 'QR_CODE' ? '扫码' : '定位' }}</em>
               </button>
             </li>
           </ol>
@@ -274,7 +318,7 @@ onMounted(loadRoutes)
           <header><div><p class="m2-kicker">MY PHOTO FOOTPRINTS</p><h2>我的图片足迹</h2></div><span>{{ photoFootprints.length }} 张</span></header>
           <div v-if="photoFootprints.length" class="footprint-grid">
             <figure v-for="item in photoFootprints" :key="item.record.recordId">
-              <img :src="item.url" :alt="`${item.task?.title || '校园任务'}打卡照片`" loading="lazy" />
+              <img v-if="item.url" :src="item.url" :alt="`${item.task?.title || '校园任务'}打卡照片`" loading="lazy" />
               <figcaption><b>{{ item.task?.title || '校园任务' }}</b><span>{{ formatRecordTime(item.record.completedAt) }}</span></figcaption>
             </figure>
           </div>
@@ -287,14 +331,14 @@ onMounted(loadRoutes)
         </article>
 
         <article class="journey-ledger">
-          <header><div><p class="m2-kicker">LIVE ACTIVITY</p><h2>积分动态</h2></div><strong>{{ earnedRoutePoints }} / {{ selectedRoutePoints }}</strong></header>
+          <header><div><p class="m2-kicker">LIVE ACTIVITY</p><h2>本路线积分动态</h2></div><strong>{{ earnedRoutePoints }} / {{ selectedRoutePoints }}</strong></header>
           <ol v-if="recentPointRecords.length">
             <li v-for="record in recentPointRecords" :key="record.id">
               <span>{{ record.amount > 0 ? '+' : '' }}{{ record.amount }}</span>
               <div><b>{{ record.description }}</b><small>{{ formatRecordTime(record.created_at) }} · 余额 {{ record.balance_after }}</small></div>
             </li>
           </ol>
-          <div v-else class="ledger-empty"><b>尚无积分动态</b><p>领取路线并完成任务后，积分变化将在这里实时显示。</p></div>
+          <div v-else class="ledger-empty"><b>本路线尚无积分动态</b><p>完成当前路线任务后，对应积分变化将在这里显示。</p></div>
           <footer><span>已完成路线 {{ completedRouteCount }} / {{ routes.length }}</span><span>文化徽章 {{ ownedBadges.length }} / {{ badges.length }}</span></footer>
         </article>
       </section>
@@ -338,7 +382,7 @@ onMounted(loadRoutes)
 
 .footprint-empty button{min-height:40px;padding:0 13px;border:0;border-radius:7px;color:#fff;background:#9f2d35;font-weight:800;white-space:nowrap}
 
-.journey-footprints{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:16px;margin-top:34px}.journey-footprints>article{padding:24px;border:1px solid #dfe3dd;border-radius:14px;background:#fff}.journey-footprints header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.journey-footprints h2{margin:0}.photo-footprints>header>span{color:#9f2d35;font-size:12px;font-weight:800}.footprint-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:17px}.footprint-grid figure{position:relative;min-height:190px;overflow:hidden;margin:0;border-radius:10px;background:#e8eee9}.footprint-grid img{width:100%;height:100%;min-height:190px;object-fit:cover}.footprint-grid figcaption{position:absolute;right:0;bottom:0;left:0;display:grid;padding:34px 12px 11px;color:#fff;background:linear-gradient(transparent,rgba(17,39,31,.9))}.footprint-grid figcaption span{font-size:9px}.footprint-empty{display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:14px;min-height:150px;margin-top:17px;padding:20px;background:#f1f5f2;border:1px dashed #b9cabf;border-radius:10px}.footprint-empty>span{display:grid;place-items:center;width:54px;height:54px;color:#fff;background:#285a47;border-radius:50%;font-family:serif;font-size:22px}.footprint-empty p,.ledger-empty p{margin:4px 0 0;color:#68756e;font-size:11px;line-height:1.6}.journey-ledger>header>strong{color:#9f2d35;font-size:21px}.journey-ledger ol{display:grid;gap:0;margin:16px 0 0;padding:0;list-style:none}.journey-ledger li{display:grid;grid-template-columns:42px 1fr;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #edf0ed}.journey-ledger li>span{color:#9f2d35;font-weight:900}.journey-ledger li div{display:grid}.journey-ledger li b{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.journey-ledger li small{color:#7b8580;font-size:9px}.ledger-empty{min-height:120px;padding:22px 0}.journey-ledger footer{display:flex;justify-content:space-between;gap:8px;margin-top:13px;padding-top:13px;border-top:1px solid #e4e8e4;color:#637069;font-size:9px}.route-certificate{display:grid;grid-template-columns:82px 1fr auto;align-items:center;gap:20px;margin-top:24px;padding:24px;color:#fff;background:linear-gradient(125deg,#7e222c,#aa4b36);border:2px solid #eac778;border-radius:14px;box-shadow:0 18px 38px rgba(92,29,35,.2)}.route-certificate>span{display:grid;place-items:center;width:76px;height:76px;color:#774e13;background:#ebc879;border:5px double #fff5d9;border-radius:50%;font-family:serif;font-size:20px}.route-certificate p{margin:0;color:#f1d597;font-size:9px;font-weight:900;letter-spacing:.12em}.route-certificate h2{margin:4px 0}.route-certificate small{color:#f3dfd0;line-height:1.6}.route-certificate button{min-height:42px;padding:0 15px;border:1px solid rgba(255,255,255,.55);border-radius:7px;color:#fff;background:rgba(255,255,255,.09);font-weight:800}
+.journey-footprints{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr);gap:16px;margin-top:34px}.journey-footprints>article{padding:24px;border:1px solid #dfe3dd;border-radius:14px;background:#fff}.journey-footprints header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.journey-footprints h2{margin:0}.photo-footprints>header>span{color:#9f2d35;font-size:12px;font-weight:800}.footprint-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:17px}.footprint-grid figure{position:relative;min-height:190px;overflow:hidden;margin:0;border-radius:10px;background:#e8eee9}.footprint-grid img{width:100%;height:100%;min-height:190px;object-fit:cover}.footprint-grid figcaption{position:absolute;right:0;bottom:0;left:0;display:grid;padding:34px 12px 11px;color:#fff;background:linear-gradient(transparent,rgba(17,39,31,.9))}.footprint-grid figcaption span{font-size:9px}.footprint-empty{display:grid;grid-template-columns:58px 1fr auto;align-items:center;gap:14px;min-height:150px;margin-top:17px;padding:20px;background:#f1f5f2;border:1px dashed #b9cabf;border-radius:10px}.footprint-empty>span{display:grid;place-items:center;width:54px;height:54px;color:#fff;background:#285a47;border-radius:50%;font-family:serif;font-size:22px}.footprint-empty p,.ledger-empty p{margin:4px 0 0;color:#68756e;font-size:11px;line-height:1.6}.journey-ledger{display:flex;min-width:0;flex-direction:column}.journey-ledger>header>strong{color:#9f2d35;font-size:21px;white-space:nowrap}.journey-ledger ol{display:grid;gap:0;margin:16px 0 0;padding:0;list-style:none}.journey-ledger li{display:grid;grid-template-columns:42px minmax(0,1fr);align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #edf0ed}.journey-ledger li>span{color:#9f2d35;font-weight:900}.journey-ledger li div{display:grid;min-width:0}.journey-ledger li b{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.journey-ledger li small{color:#7b8580;font-size:9px}.ledger-empty{min-height:120px;padding:22px 0}.journey-ledger footer{display:flex;min-height:0;justify-content:space-between;gap:8px;margin-top:auto;padding:13px 0 0;border-top:1px solid #e4e8e4;color:#637069;background:transparent;font-size:9px;line-height:1.5}.route-certificate{display:grid;grid-template-columns:82px 1fr auto;align-items:center;gap:20px;margin-top:24px;padding:24px;color:#fff;background:linear-gradient(125deg,#7e222c,#aa4b36);border:2px solid #eac778;border-radius:14px;box-shadow:0 18px 38px rgba(92,29,35,.2)}.route-certificate>span{display:grid;place-items:center;width:76px;height:76px;color:#774e13;background:#ebc879;border:5px double #fff5d9;border-radius:50%;font-family:serif;font-size:20px}.route-certificate p{margin:0;color:#f1d597;font-size:9px;font-weight:900;letter-spacing:.12em}.route-certificate h2{margin:4px 0}.route-certificate small{color:#f3dfd0;line-height:1.6}.route-certificate button{min-height:42px;padding:0 15px;border:1px solid rgba(255,255,255,.55);border-radius:7px;color:#fff;background:rgba(255,255,255,.09);font-weight:800}
 
 @media(max-width:1180px){.journey-footprints{grid-template-columns:1fr}.footprint-grid{grid-template-columns:repeat(4,1fr)}}@media(max-width:760px){.footprint-grid{grid-template-columns:repeat(2,1fr)}.footprint-empty{grid-template-columns:52px 1fr}.footprint-empty button{grid-column:1/-1}.route-certificate{grid-template-columns:62px 1fr}.route-certificate>span{width:56px;height:56px;font-size:15px}.route-certificate button{grid-column:1/-1}.journey-footprints>article{padding:19px}}@media(max-width:480px){.footprint-grid{grid-template-columns:1fr}}
 </style>

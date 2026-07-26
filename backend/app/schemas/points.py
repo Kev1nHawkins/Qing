@@ -17,8 +17,8 @@ class PointRead(Timestamped):
 
 
 class PointRedeemRequest(BaseModel):
-    product_code: str = Field(min_length=1, max_length=80)
-    redemption_id: str = Field(min_length=8, max_length=80)
+    product_code: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,79}$")
+    redemption_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$")
 
 
 class BadgeCreate(BaseModel):
