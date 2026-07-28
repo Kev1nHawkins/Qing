@@ -20,8 +20,13 @@ class PostUpdate(BaseModel):
 
 class PostRead(Timestamped):
     author_id: int
+    author_name: str | None = None
+    author_avatar_url: str | None = None
     culture_item_id: int | None
+    culture_item_title: str | None = None
     creation_id: int | None
+    creation_title: str | None = None
+    creation_preview_url: str | None = None
     title: str
     content: str
     cover_image_url: str | None
@@ -29,6 +34,7 @@ class PostRead(Timestamped):
     like_count: int
     comment_count: int
     favorite_count: int
+    tags: list[str] = Field(default_factory=list)
 
 
 class CommentCreate(BaseModel):
@@ -39,6 +45,8 @@ class CommentCreate(BaseModel):
 class CommentRead(Timestamped):
     post_id: int
     user_id: int
+    author_name: str | None = None
+    author_avatar_url: str | None = None
     parent_id: int | None
     content: str
     is_deleted: bool
