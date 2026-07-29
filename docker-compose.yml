@@ -72,7 +72,10 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      # AI knowledge base and prompt templates.
       - ./data:/app/data:ro
+      # Community demo seed resolves repository data from /data.
+      - ./data:/data:ro
       - uploads_data:/app/uploads
     depends_on:
       mysql:

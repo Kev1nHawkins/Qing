@@ -18,8 +18,7 @@ const router = createRouter({
     },
     {
       path: '/posts',
-      component: () => import('@/views/PlaceholderView.vue'),
-      props: { title: '社区审核', note: '由成员 5 在此接入帖子审核与下架操作。' },
+      component: () => import('@/views/PostManageView.vue'),
     },
   ],
 })
