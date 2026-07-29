@@ -1,0 +1,122 @@
+[
+  {
+    "question": "为什么木棉是广州的象征？",
+    "expected_source": "01_hongmian.md",
+    "category": "木棉文化"
+  },
+  {
+    "question": "木棉为什么被称为英雄花？",
+    "expected_source": "01_hongmian.md",
+    "category": "木棉文化"
+  },
+  {
+    "question": "什么是岭南文化？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "岭南文化"
+  },
+  {
+    "question": "岭南文化有哪些主要分支？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "岭南文化"
+  },
+  {
+    "question": "粤剧和越剧是同一种戏曲吗？",
+    "expected_source": "03_yueju.md",
+    "category": "粤剧"
+  },
+  {
+    "question": "粤剧什么时候成为世界级非物质文化遗产？",
+    "expected_source": "03_yueju.md",
+    "category": "粤剧"
+  },
+  {
+    "question": "广绣是岭南文化的代表工艺吗？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "广绣"
+  },
+  {
+    "question": "广彩属于岭南文化中的哪类代表内容？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "广彩"
+  },
+  {
+    "question": "什么是骑楼？",
+    "expected_source": "04_lingnan_architecture.md",
+    "category": "骑楼"
+  },
+  {
+    "question": "广州骑楼为什么适合遮阳避雨和沿街商业？",
+    "expected_source": "04_lingnan_architecture.md",
+    "category": "骑楼"
+  },
+  {
+    "question": "陈家祠为什么能代表岭南建筑艺术？",
+    "expected_source": "04_lingnan_architecture.md",
+    "category": "陈家祠"
+  },
+  {
+    "question": "广州早茶为什么不只是早餐？",
+    "expected_source": "05_guangzhou_food.md",
+    "category": "广州早茶"
+  },
+  {
+    "question": "广州早茶中的一盅两件是什么意思？",
+    "expected_source": "05_guangzhou_food.md",
+    "category": "广州早茶"
+  },
+  {
+    "question": "叹早茶中的叹是什么意思？",
+    "expected_source": "05_guangzhou_food.md",
+    "category": "广州早茶"
+  },
+  {
+    "question": "岭南地区有哪些传统节庆民俗，例如舞狮？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "舞狮"
+  },
+  {
+    "question": "龙舟活动属于岭南文化中的哪类民俗？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "龙舟文化"
+  },
+  {
+    "question": "岭南文化有哪些代表，五羊传说属于广州文化吗？",
+    "expected_source": "02_lingnan_culture.md",
+    "category": "五羊传说"
+  },
+  {
+    "question": "广州大学的校训是什么？",
+    "expected_source": "06_guangzhou_university.md",
+    "category": "广州大学校园文化"
+  },
+  {
+    "question": "广州大学是哪一年建立的？",
+    "expected_source": "06_guangzhou_university.md",
+    "category": "广州大学校园文化"
+  },
+  {
+    "question": "广州大学校徽有什么文化含义？",
+    "expected_source": "06_guangzhou_university.md",
+    "category": "广州大学校园文化"
+  },
+  {
+    "question": "广州大学目前有哪些校区？",
+    "expected_source": "06_guangzhou_university.md",
+    "category": "广州大学校园文化"
+  },
+  {
+    "question": "木棉花能够治疗哪些疾病，有什么医疗功效？",
+    "expected_source": null,
+    "category": "越界-医疗功效"
+  },
+  {
+    "question": "请评价一个与岭南文化无关的外国政治人物。",
+    "expected_source": null,
+    "category": "越界-无关政治"
+  },
+  {
+    "question": "怎样修理一台无法开机的电脑？",
+    "expected_source": null,
+    "category": "越界-随机问题"
+  }
+]

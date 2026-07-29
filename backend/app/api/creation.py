@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 
 from app.api.dependencies import AdminUser, CurrentUser, DbSession
@@ -12,6 +14,11 @@ from app.schemas.creation import (
     TemplateCreate,
     TemplateRead,
     TemplateUpdate,
+)
+from app.services.creation.prompt_service import CreationPromptService
+from app.services.creation.task_runner import (
+    CreationTaskRunner,
+    get_creation_task_runner,
 )
 
 router = APIRouter(prefix="/creations", tags=["Creation"])
@@ -62,10 +69,17 @@ async def create_creation(
     payload: CreationRequest,
     db: DbSession,
     current_user: CurrentUser,
+    task_runner: Annotated[
+        CreationTaskRunner,
+        Depends(get_creation_task_runner),
+    ],
 ) -> dict:
     template = await get_or_404(db, CreationTemplate, payload.template_id, "创作模板")
     try:
-        prompt = template.prompt_template.format(**payload.options)
+        prompt = CreationPromptService().build(
+            template.prompt_template,
+            payload.options,
+        )
     except KeyError as exc:
         raise HTTPException(status_code=422, detail=f"缺少模板选项：{exc.args[0]}") from exc
     creation = AICreation(
@@ -80,6 +94,7 @@ async def create_creation(
     db.add(creation)
     await db.commit()
     await db.refresh(creation)
+    task_runner.submit(creation.id)
     return success(
         CreationRead.model_validate(creation).model_dump(),
         "创作任务已提交，等待 AI 服务处理",
@@ -120,7 +135,13 @@ async def get_creation(
 
 @router.post("/{creation_id}/retry", summary="重试失败的 AI 创作")
 async def retry_creation(
-    creation_id: int, db: DbSession, current_user: CurrentUser
+    creation_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+    task_runner: Annotated[
+        CreationTaskRunner,
+        Depends(get_creation_task_runner),
+    ],
 ) -> dict:
     creation = await get_or_404(db, AICreation, creation_id, "AI 作品")
     if creation.user_id != current_user.id:
@@ -132,5 +153,6 @@ async def retry_creation(
     creation.retry_count += 1
     await db.commit()
     await db.refresh(creation)
+    task_runner.submit(creation.id)
     return success(CreationRead.model_validate(creation).model_dump(), "已重新进入处理队列")
 
