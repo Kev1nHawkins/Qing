@@ -8,8 +8,7 @@ const router = createRouter({
     { path: '/cultures', component: () => import('@/views/CultureManageView.vue') },
     {
       path: '/routes',
-      component: () => import('@/views/PlaceholderView.vue'),
-      props: { title: '路线任务', note: '由成员 4 在此接入路线与任务管理。' },
+      component: () => import('@/views/RouteTaskManageView.vue'),
     },
     {
       path: '/templates',

@@ -26,4 +26,3 @@ api_router.include_router(community.router)
 api_router.include_router(points.router)
 api_router.include_router(badge.router)
 api_router.include_router(admin.router)
-

@@ -47,10 +47,10 @@ class TaskCreate(BaseModel):
     options: list[str] | None = None
     correct_answer: str | None = None
     points: int = Field(default=10, ge=0, le=1000)
-    qr_code: str | None = None
-    latitude: Decimal | None = None
-    longitude: Decimal | None = None
-    radius_meters: int = Field(default=100, ge=1)
+    qr_code: str | None = Field(default=None, max_length=120)
+    latitude: Decimal | None = Field(default=None, ge=-90, le=90)
+    longitude: Decimal | None = Field(default=None, ge=-180, le=180)
+    radius_meters: int = Field(default=100, ge=1, le=1000)
 
 
 class TaskUpdate(BaseModel):
@@ -64,10 +64,10 @@ class TaskUpdate(BaseModel):
     options: list[str] | None = None
     correct_answer: str | None = None
     points: int | None = Field(default=None, ge=0, le=1000)
-    qr_code: str | None = None
-    latitude: Decimal | None = None
-    longitude: Decimal | None = None
-    radius_meters: int | None = Field(default=None, ge=1)
+    qr_code: str | None = Field(default=None, max_length=120)
+    latitude: Decimal | None = Field(default=None, ge=-90, le=90)
+    longitude: Decimal | None = Field(default=None, ge=-180, le=180)
+    radius_meters: int | None = Field(default=None, ge=1, le=1000)
 
 
 class TaskRead(Timestamped):
@@ -81,15 +81,15 @@ class TaskRead(Timestamped):
     question: str | None
     options: list[str] | None
     points: int
-    qr_code: str | None
     latitude: Decimal | None
     longitude: Decimal | None
     radius_meters: int
 
 
 class TaskCompleteRequest(BaseModel):
-    answer: str | None = None
-    qr_code: str | None = None
-    latitude: Decimal | None = None
-    longitude: Decimal | None = None
+    answer: str | None = Field(default=None, max_length=500)
+    qr_code: str | None = Field(default=None, max_length=120)
+    latitude: Decimal | None = Field(default=None, ge=-90, le=90)
+    longitude: Decimal | None = Field(default=None, ge=-180, le=180)
+    file_asset_id: int | None = Field(default=None, ge=1)
 

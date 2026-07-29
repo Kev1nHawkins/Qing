@@ -7,6 +7,10 @@ export default createRouter({
     { path: '/', component: HomeView },
     { path: '/cultures', component: () => import('@/views/CultureView.vue') },
     { path: '/routes', component: () => import('@/views/RouteView.vue') },
+    {
+      path: '/routes/journey',
+      component: () => import('@/views/route/RouteJourney.vue'),
+    },
     { path: '/community', component: () => import('@/views/CommunityView.vue') },
     { path: '/profile', component: () => import('@/views/ProfileView.vue') },
     { path: '/login', component: () => import('@/views/LoginView.vue') },
