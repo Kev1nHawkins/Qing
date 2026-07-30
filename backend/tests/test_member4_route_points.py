@@ -15,7 +15,7 @@ from app.api.points import SHOP_PRODUCTS
 from app.api.task import distance_meters, validate_task_configuration
 from app.core.database import get_db
 from app.main import app
-from app.models import Base, FileAsset, Location, Role, Route, RouteTask, User
+from app.models import Badge, Base, FileAsset, Location, Role, Route, RouteTask, User
 from app.schemas.points import PointRedeemRequest
 from app.schemas.route import TaskCompleteRequest, TaskCreate, TaskRead
 from app.services.task_evidence import resolve_asset_path, validate_image
@@ -124,6 +124,34 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             role_id=role.id,
         )
         session.add_all([user, other_user])
+        session.add_all(
+            [
+                Badge(
+                    code="member4-first-task",
+                    name="初次探索",
+                    description="完成首个任务",
+                    rule_type="TASK_COUNT",
+                    rule_value=1,
+                    is_active=True,
+                ),
+                Badge(
+                    code="member4-three-tasks",
+                    name="路线行者",
+                    description="完成三个任务",
+                    rule_type="TASK_COUNT",
+                    rule_value=3,
+                    is_active=True,
+                ),
+                Badge(
+                    code="member4-ten-points",
+                    name="积分起步",
+                    description="累计获得十积分",
+                    rule_type="POINT_TOTAL",
+                    rule_value=10,
+                    is_active=True,
+                ),
+            ]
+        )
         await session.flush()
         location = Location(
             name="测试地点",
@@ -358,6 +386,22 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             )
             assert complete_response.status_code == 200
             assert complete_response.json()["data"]["awardedPoints"] == 10
+            progress_response = await client.get(
+                f"/api/v1/routes/{ids['route']}/progress"
+            )
+            assert progress_response.status_code == 200
+            assert progress_response.json()["data"]["completedTaskIds"] == [ids["photo"]]
+            assert progress_response.json()["data"]["records"][0]["awardedPoints"] == 10
+
+            point_records_response = await client.get("/api/v1/points/records")
+            assert point_records_response.status_code == 200
+            assert point_records_response.json()["data"]["total"] == 1
+            assert point_records_response.json()["data"]["items"][0]["amount"] == 10
+            assert point_records_response.json()["data"]["items"][0]["balance_after"] == 10
+
+            badges_response = await client.get("/api/v1/badges/mine")
+            assert badges_response.status_code == 200
+            assert len(badges_response.json()["data"]) == 2
 
             repeat_response = await client.post(
                 f"/api/v1/tasks/{ids['photo']}/complete",
@@ -365,6 +409,10 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             )
             assert repeat_response.status_code == 200
             assert repeat_response.json()["data"]["alreadyCompleted"] is True
+            repeated_point_records = await client.get("/api/v1/points/records")
+            assert repeated_point_records.json()["data"]["total"] == 1
+            repeated_badges = await client.get("/api/v1/badges/mine")
+            assert len(repeated_badges.json()["data"]) == 2
 
             redemption_payload = {
                 "product_code": "kapok-wallpaper",
@@ -422,6 +470,8 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             )
             assert near_location_response.status_code == 200
             assert near_location_response.json()["data"]["distanceMeters"] == 0
+            final_badges_response = await client.get("/api/v1/badges/mine")
+            assert len(final_badges_response.json()["data"]) == 3
 
             evidence_response = await client.get(
                 f"/api/v1/tasks/{ids['photo']}/evidence/{asset_id}"

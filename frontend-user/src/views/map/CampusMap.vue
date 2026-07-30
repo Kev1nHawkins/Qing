@@ -47,18 +47,48 @@ function loadAmap(): Promise<any> {
   if (securityCode) (window as any)._AMapSecurityConfig = { securityJsCode: securityCode }
   if ((window as any).AMap) return Promise.resolve((window as any).AMap)
   return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (error?: Error) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeoutId)
+      const AMap = (window as any).AMap
+      if (error || !AMap) {
+        reject(error || new Error('高德地图脚本未正确初始化'))
+        return
+      }
+      resolve(AMap)
+    }
+    const timeoutId = window.setTimeout(
+      () => finish(new Error('高德地图连接超时')),
+      8000,
+    )
     const existing = document.querySelector<HTMLScriptElement>('script[data-lingchao-amap]')
     if (existing) {
-      existing.addEventListener('load', () => resolve((window as any).AMap), { once: true })
-      existing.addEventListener('error', () => reject(new Error('高德地图脚本加载失败')), { once: true })
+      if (existing.dataset.loadState === 'failed') {
+        finish(new Error('高德地图脚本加载失败'))
+        return
+      }
+      if (existing.dataset.loadState === 'loaded') {
+        finish()
+        return
+      }
+      existing.addEventListener('load', () => finish(), { once: true })
+      existing.addEventListener('error', () => finish(new Error('高德地图脚本加载失败')), { once: true })
       return
     }
     const script = document.createElement('script')
     script.dataset.lingchaoAmap = 'true'
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}`
     script.async = true
-    script.onload = () => resolve((window as any).AMap)
-    script.onerror = () => reject(new Error('高德地图脚本加载失败'))
+    script.onload = () => {
+      script.dataset.loadState = 'loaded'
+      finish()
+    }
+    script.onerror = () => {
+      script.dataset.loadState = 'failed'
+      finish(new Error('高德地图脚本加载失败'))
+    }
     document.head.appendChild(script)
   })
 }
