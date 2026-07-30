@@ -282,14 +282,16 @@ async def complete_task(
 
     record_answer: str | None = None
     distance: float | None = None
-    is_correct = False
+    is_verified = False
+    answer_is_correct: bool | None = None
     if task.task_type == TaskType.QUIZ.value:
-        is_correct = bool(
+        record_answer = payload.answer.strip() if payload.answer else None
+        is_verified = bool(record_answer)
+        answer_is_correct = bool(
             payload.answer
             and task.correct_answer
             and payload.answer.strip() == task.correct_answer.strip()
         )
-        record_answer = payload.answer.strip() if payload.answer else None
     elif task.task_type == TaskType.CHECK_IN.value:
         asset = (
             await db.scalar(
@@ -308,14 +310,16 @@ async def complete_task(
                 asset.size_bytes,
                 asset.mime_type,
             )
-        is_correct = asset is not None
+        is_verified = asset is not None
+        answer_is_correct = is_verified
         record_answer = f"ASSET:{asset.id}" if asset else None
     elif task.task_type == TaskType.QR_CODE.value:
-        is_correct = bool(
+        is_verified = bool(
             payload.qr_code
             and task.qr_code
             and hmac.compare_digest(payload.qr_code, task.qr_code)
         )
+        answer_is_correct = is_verified
     elif task.task_type == TaskType.SIMULATED_LOCATION.value:
         if (
             payload.latitude is not None
@@ -329,14 +333,15 @@ async def complete_task(
                 float(task.latitude),
                 float(task.longitude),
             )
-            is_correct = distance <= task.radius_meters
-    if not is_correct:
+            is_verified = distance <= task.radius_meters
+            answer_is_correct = is_verified
+    if not is_verified:
         raise HTTPException(status_code=400, detail="任务验证未通过，请检查答案或打卡凭证")
 
     record = existing or UserTaskRecord(user_id=current_user.id, task_id=task_id)
     record.status = TaskStatus.COMPLETED.value
     record.answer = record_answer
-    record.is_correct = True
+    record.is_correct = answer_is_correct
     record.completed_at = datetime.now(UTC)
     record.awarded_points = task.points
     db.add(record)

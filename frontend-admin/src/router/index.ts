@@ -5,6 +5,7 @@ const router = createRouter({
   routes: [
     { path: '/login', component: () => import('@/views/LoginView.vue') },
     { path: '/', component: () => import('@/views/DashboardView.vue') },
+    { path: '/users', component: () => import('@/views/UserManageView.vue') },
     { path: '/cultures', component: () => import('@/views/CultureManageView.vue') },
     {
       path: '/routes',

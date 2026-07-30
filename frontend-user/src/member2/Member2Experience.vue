@@ -147,14 +147,14 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
         <section class="m2-campus-signals" aria-label="广州大学校园文化元素">
           <article class="m2-motto-tile"><div class="m2-gzhu-seal"><span>广大</span><small>1927</small></div><div><img class="m2-motto-logo" :src="gzuOfficialLogo" alt="广州大学官方标识" /><h3>博学笃行<br />与时俱进</h3><small>把大学精神写进每一次文化探索</small></div></article>
           <article class="m2-three-campus-tile"><p>THREE CAMPUSES</p><h3>一校三园 · 文化共生</h3><div><span><i>01</i>大学城校区</span><span><i>02</i>桂花岗校区</span><span><i>03</i>黄埔校区</span></div><small>共同构成广州大学校园文化地图</small></article>
-          <article class="m2-mini-route"><header><span>红棉寻迹<small>大学城校区示范线</small></span><b>2.3 KM</b></header><div class="m2-route-line"><i /><i /><i /><i /><i /></div><footer><span>正门</span><span>图书馆</span><span>红棉广场</span><span>校史点</span><span>文化墙</span></footer></article>
+          <article class="m2-mini-route"><header><span>红棉寻迹<small>大学城校区示范线</small></span><b>2.4 KM</b></header><div class="m2-route-line"><i /><i /><i /><i /><i /></div><footer><span>正门</span><span>图书馆</span><span>体育馆</span><span>校史馆</span><span>红色长廊</span></footer></article>
           <article class="m2-kapok-season"><div class="m2-kapok-symbol"><i /><i /><i /><i /><i /><b /></div><div><p>KAPOK SEASON</p><strong>03—04</strong><span>木棉花期 · 城市英雄花</span></div></article>
         </section>
 
         <section class="m2-section m2-campus-personalities">
           <div class="m2-section-head"><div><p class="m2-kicker">THREE CAMPUSES · ONE GZHU</p><h2>三种校园气质，一张广大文化地图</h2></div><img :src="gzuOfficialLogo" alt="广州大学" /></div>
           <div class="m2-campus-card-grid">
-            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、红棉广场和校园文化空间为节点，承载学习、生活与文化参与的完整体验。" :tags="['红棉寻迹','校园地标','学生共创']" />
+            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、何世杰体育馆、校史馆和红色长廊为节点，连接学习、体育、商都记忆与红色文化。" :tags="['红棉寻迹','校园地标','学生共创']" />
             <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" :tags="['校史记忆','老城文脉','社区连接']" />
             <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" :tags="['黄埔研究院','科技创新','产学研共创']" />
           </div>

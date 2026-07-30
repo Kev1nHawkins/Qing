@@ -15,7 +15,17 @@ button, input { font: inherit; }
   color: #fff; background: #9f2832;
 }
 .brand { font-size: 22px; font-weight: 800; letter-spacing: .08em; }
+.topbar-actions { display: flex; align-items: center; gap: 16px; }
 .tagline { font-size: 12px; opacity: .8; }
+.topbar-login {
+  padding: 6px 12px; border: 1px solid rgba(255,255,255,.55); border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+}
+.topbar-register {
+  padding: 7px 13px; color: #8d2029; background: #fff; border-radius: 999px;
+  font-size: 12px; font-weight: 800;
+}
+.topbar-user{display:grid;justify-items:end;padding:4px 10px;color:#fff;border-right:1px solid rgba(255,255,255,.35)}.topbar-user strong{font-size:13px}.topbar-user small{font-size:9px;opacity:.78}.topbar-logout{padding:6px 11px;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.55);border-radius:999px;font-size:11px}
 main { max-width: 1040px; margin: 0 auto; padding: 24px 20px; }
 .bottom-nav {
   position: fixed; z-index: 5; bottom: 0; left: 0; right: 0;
@@ -51,4 +61,3 @@ h1 { max-width: 700px; margin: 12px 0; font-size: clamp(36px, 8vw, 72px); line-h
   .hero { padding: 30px 24px; border-radius: 20px; }
   .tagline { display: none; }
 }
-

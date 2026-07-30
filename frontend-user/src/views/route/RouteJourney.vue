@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import CulturalTokenReveal from '@/components/CulturalTokenReveal.vue'
 import CampusMap from '@/views/map/CampusMap.vue'
 import PointsMall from '@/views/points/PointsMall.vue'
 import TaskPanel from '@/views/task/TaskPanel.vue'
 import { api } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import {
+  culturalTokenForTask,
+  type CulturalToken,
+} from '@/views/route/culturalTokens'
 import type {
   Badge,
   CultureRoute,
@@ -19,6 +26,8 @@ import type {
 } from '@/types'
 
 const emit = defineEmits<{ login: []; create: [] }>()
+const router = useRouter()
+const auth = useAuthStore()
 
 const routes = ref<CultureRoute[]>([])
 const locations = ref<Location[]>([])
@@ -34,13 +43,17 @@ const busy = ref(false)
 const error = ref('')
 const toast = ref('')
 const unlockedBadge = ref<Badge>()
+const unlockedToken = ref<{ token: CulturalToken; points: number }>()
 const evidenceUrls = ref<Record<number, string>>({})
 
-const isLoggedIn = computed(() => Boolean(localStorage.getItem('accessToken')))
+const isLoggedIn = computed(() => auth.isLoggedIn)
 const selectedRoute = computed(() => routes.value.find(item => item.id === selectedRouteId.value) || routes.value[0])
 const selectedProgress = computed(() => selectedRoute.value ? progress.value[selectedRoute.value.id] : undefined)
 const completedTaskIds = computed(() => selectedProgress.value?.completedTaskIds || [])
 const activeTask = computed(() => selectedRoute.value?.tasks?.find(task => task.id === activeTaskId.value))
+const activeCulturalToken = computed(() =>
+  activeTask.value ? culturalTokenForTask(activeTask.value) : undefined,
+)
 const locationMap = computed(() => new Map(locations.value.map(item => [item.id, item])))
 const totalTaskCount = computed(() => routes.value.reduce((total, route) => total + (route.tasks?.length || 0), 0))
 const ownedBadgeIds = computed(() => new Set(ownedBadges.value.map(item => item.badge_id)))
@@ -89,6 +102,7 @@ function formatRecordTime(value: string | null) {
 
 async function handleMallRedeemed(result: ShopRedeemResult) {
   pointsTotal.value = result.pointsTotal
+  if (auth.user) auth.user.points_total = result.pointsTotal
   toast.value = result.alreadyRedeemed
     ? `${result.productName}的兑换请求已处理`
     : `${result.productName}兑换成功，消耗 ${result.cost} 积分`
@@ -174,13 +188,29 @@ function selectRoute(route: CultureRoute) {
 }
 
 function selectTask(task: RouteTask) {
+  if (!isLoggedIn.value) {
+    const redirect = task.task_type === 'QUIZ' && selectedRoute.value
+      ? `/routes/${selectedRoute.value.id}/tasks/${task.id}/quiz`
+      : '/routes/journey'
+    requestLogin(redirect)
+    return
+  }
+  if (task.task_type === 'QUIZ' && selectedRoute.value) {
+    const target = `/routes/${selectedRoute.value.id}/tasks/${task.id}/quiz`
+    router.push(target)
+    return
+  }
   activeTaskId.value = task.id
+}
+
+function requestLogin(redirect = '/routes/journey') {
+  router.push({ path: '/login', query: { redirect } })
 }
 
 async function startRoute() {
   if (!selectedRoute.value) return
   if (!isLoggedIn.value) {
-    emit('login')
+    requestLogin()
     return
   }
   busy.value = true
@@ -200,18 +230,23 @@ async function startRoute() {
 async function completeTask(submission: TaskSubmission) {
   if (!activeTask.value) return
   if (!isLoggedIn.value) {
-    emit('login')
+    requestLogin()
     return
   }
+  const completingTask = activeTask.value
   busy.value = true
   error.value = ''
   toast.value = ''
   const beforeBadges = new Set(ownedBadges.value.map(item => item.badge_id))
   try {
+    if (!selectedProgress.value?.started && selectedRoute.value) {
+      await api.post(`/routes/${selectedRoute.value.id}/start`)
+      await refreshProgress()
+    }
     const payload = { ...submission.payload }
     if (submission.photo) {
       const upload = await api.post<{ data: { id: number } }>(
-        `/tasks/${activeTask.value.id}/evidence`,
+        `/tasks/${completingTask.id}/evidence`,
         submission.photo,
         {
           headers: {
@@ -223,16 +258,25 @@ async function completeTask(submission: TaskSubmission) {
       payload.file_asset_id = upload.data.data.id
     }
     const response = await api.post<{ data: TaskCompleteResult }>(
-      `/tasks/${activeTask.value.id}/complete`,
+      `/tasks/${completingTask.id}/complete`,
       payload,
     )
     const result = response.data.data
+    if (auth.user && result.pointsTotal !== undefined) {
+      auth.user.points_total = result.pointsTotal
+    }
     await refreshAccount()
     const newOwned = ownedBadges.value.find(item => !beforeBadges.has(item.badge_id))
     unlockedBadge.value = newOwned ? badges.value.find(item => item.id === newOwned.badge_id) : undefined
     toast.value = result.alreadyCompleted
       ? '该任务已完成，本次未重复加分'
       : `任务完成，获得 ${result.awardedPoints} 积分`
+    if (!result.alreadyCompleted) {
+      unlockedToken.value = {
+        token: culturalTokenForTask(completingTask),
+        points: result.awardedPoints,
+      }
+    }
     const next = selectedRoute.value?.tasks?.find(task => !completedTaskIds.value.includes(task.id))
     if (next) activeTaskId.value = next.id
   } catch (event) {
@@ -309,7 +353,7 @@ onBeforeUnmount(() => {
         :points-total="pointsTotal"
         :logged-in="isLoggedIn"
         :point-records="pointRecords"
-        @login="emit('login')"
+        @login="requestLogin()"
         @redeemed="handleMallRedeemed"
       />
 
@@ -325,7 +369,7 @@ onBeforeUnmount(() => {
           <div v-else class="footprint-empty">
             <span>影</span>
             <div><b>{{ isLoggedIn ? '还没有图片足迹' : '登录后记录图片足迹' }}</b><p>完成图片任务后，现场照片会自动汇入这条路线的个人文化相册。</p></div>
-            <button v-if="!isLoggedIn" type="button" @click="emit('login')">去登录</button>
+            <button v-if="!isLoggedIn" type="button" @click="requestLogin()">去登录</button>
             <button v-else-if="nextTask" type="button" @click="selectTask(nextTask)">完成下一任务</button>
           </div>
         </article>
@@ -364,6 +408,12 @@ onBeforeUnmount(() => {
     <div v-if="toast" class="journey-toast" role="status">{{ toast }}</div>
     <div v-if="error && routes.length" class="journey-error" role="alert">{{ error }}<button type="button" @click="error = ''">关闭</button></div>
     <div v-if="unlockedBadge" class="badge-unlocked" role="status" @animationend="unlockedBadge = undefined"><span>徽</span><div><small>新徽章已解锁</small><b>{{ unlockedBadge.name }}</b><p>{{ unlockedBadge.description }}</p></div></div>
+    <CulturalTokenReveal
+      v-if="unlockedToken"
+      :token="unlockedToken.token"
+      :points="unlockedToken.points"
+      @close="unlockedToken = undefined"
+    />
 
     <TaskPanel
       v-if="activeTask"
@@ -371,6 +421,7 @@ onBeforeUnmount(() => {
       :location="locationMap.get(activeTask.location_id)"
       :completed="completedTaskIds.includes(activeTask.id)"
       :busy="busy"
+      :token-title="activeCulturalToken?.name"
       @close="activeTaskId = undefined"
       @submit="completeTask"
     />
