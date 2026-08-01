@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 
 QuestionText = Annotated[
@@ -41,6 +41,12 @@ class CreationSuggestionRead(BaseModel):
 
 
 class AIChatData(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     answer: str
     sources: list[AIChatSource]
     creation_suggestion: CreationSuggestionRead
+    mode: str
+    provider: str
+    model: str
+    fallback_used: bool = Field(alias="fallbackUsed")

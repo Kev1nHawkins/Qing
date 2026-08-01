@@ -65,3 +65,12 @@ git pull --ff-only origin develop
 - API 保持 `/api/v1` 前缀和 `{code, message, data, requestId}` 响应结构。
 - 每个成员通过个人 feature/fix 分支提交 Pull Request，不直接推送 `main` 或 `develop`。
 - 交付时附：变更清单、执行命令、验证结果、未完成项和潜在冲突文件。
+
+## 2026-08-01 AI 问答运行时降级验收
+
+- 基准：`origin/develop` `ad4fc51`，修复分支 `codex/fix-ai-chat-runtime`。
+- 向量依赖：`sentence-transformers 5.6.1` 已安装，但配置的模型缓存目录不存在；运行时自动切换本地 Markdown 关键词检索，不触发请求期模型下载。
+- 运行模式：实现 `RAG_DEEPSEEK`、`KEYWORD_DEEPSEEK`、`PRESET_FALLBACK`；DeepSeek、向量模型或网络不可用时均返回可理解的本地知识回答，不再返回 500。
+- 真实配置：本机 `LLM_PROVIDER=mock` 且未检测到 DeepSeek Key，因此真实外部 DeepSeek 调用未执行，未产生费用。
+- 验证：AI 目标测试 34 项通过，Python `compileall`、FastAPI 导入及 OpenAPI 40 路径通过；真实 TCP 五项问答均 HTTP 200、业务 `code=0`，已知问题带来源，知识库外问题明确拒答。
+- 边界：未修改前端、数据库、迁移、海报生成或社区发布契约。
