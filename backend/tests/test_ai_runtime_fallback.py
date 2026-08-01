@@ -91,6 +91,35 @@ async def test_unknown_question_is_not_fabricated() -> None:
 
 
 @pytest.mark.asyncio
+async def test_unknown_question_uses_general_deepseek_when_configured() -> None:
+    keyword = KeywordKnowledgeRetriever(KNOWLEDGE)
+    retriever = ResilientKnowledgeRetriever(None, keyword)
+    fallback = LLMService(MockLLM(), PROMPT)
+    result = await RAGService(
+        retriever=retriever,
+        llm_service=LLMService(SuccessLLM(), PROMPT),
+        fallback_llm_service=fallback,
+        external_provider="deepseek",
+        external_model="configured-model",
+    ).answer("请介绍太阳系的八大行星。")
+    assert result.answerable is True
+    assert result.answer
+    assert result.sources == []
+    assert result.mode == "GENERAL_DEEPSEEK"
+    assert result.provider == "deepseek"
+    assert result.fallback_used is False
+
+
+@pytest.mark.asyncio
+async def test_unknown_question_keeps_safe_fallback_when_general_deepseek_times_out() -> None:
+    result = await build_service(deepseek=True).answer("请介绍太阳系的八大行星。")
+    assert result.answerable is False
+    assert result.answer == RAGService.FALLBACK_ANSWER
+    assert result.mode == "PRESET_FALLBACK"
+    assert result.fallback_used is True
+
+
+@pytest.mark.asyncio
 async def test_keyword_deepseek_mode_when_external_adapter_succeeds() -> None:
     keyword = KeywordKnowledgeRetriever(KNOWLEDGE)
     retriever = ResilientKnowledgeRetriever(None, keyword)

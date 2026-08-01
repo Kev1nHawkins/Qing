@@ -4,8 +4,9 @@ import HomeView from '@/views/HomeView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: HomeView },
-    { path: '/cultures', component: () => import('@/views/CultureView.vue') },
+    { path: '/', component: HomeView, meta: { immersive: true } },
+    { path: '/cultures', component: () => import('@/views/CultureView.vue'), meta: { immersive: true } },
+    { path: '/guide', component: () => import('@/views/GuideView.vue'), meta: { immersive: true } },
     { path: '/routes', component: () => import('@/views/RouteView.vue') },
     {
       path: '/routes/journey',

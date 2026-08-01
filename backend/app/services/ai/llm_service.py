@@ -82,6 +82,21 @@ class LLMService:
             raise RuntimeError("LLM返回了空回答")
         return answer
 
+    async def answer_general(self, question: str) -> str:
+        """在本地知识库没有命中时，以小棉身份回答一般问题。"""
+        prompt = f"""你是广州大学岭南文化校园导览数字人“小棉”。
+你优先帮助用户理解岭南文化、广州城市文化和广州大学校园文化，也可以回答一般知识问题。
+回答应自然、友好、简洁；文化与历史事实要谨慎，不确定时明确说明不确定，不得编造来源。
+对于医疗、法律、金融或时效性很强的问题，给出风险提示并建议查阅权威最新资料。
+本次问题未命中本地文化知识库，因此回答中不要虚构本地资料来源。
+
+用户问题：{question}
+"""
+        answer = (await self.adapter.generate(prompt)).strip()
+        if not answer:
+            raise RuntimeError("LLM返回了空回答")
+        return answer
+
     def _render_prompt(self, question: str, context: str) -> str:
         if not self.prompt_path.is_file():
             raise FileNotFoundError(f"问答Prompt模板不存在: {self.prompt_path}")
