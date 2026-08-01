@@ -104,7 +104,16 @@ def community_client(tmp_path: Path) -> Iterator[dict]:
                 output_url="https://example.com/other.webp",
                 status=CreationStatus.SUCCESS.value,
             )
-            session.add_all([owner_creation, other_creation])
+            pending_creation = AICreation(
+                user_id=owner.id,
+                template_id=template.id,
+                culture_item_id=culture.id,
+                title="Pending AI work",
+                prompt="kapok",
+                input_payload={"subject": "kapok"},
+                status=CreationStatus.PENDING.value,
+            )
+            session.add_all([owner_creation, other_creation, pending_creation])
             await session.flush()
             state.update(
                 {
@@ -114,6 +123,7 @@ def community_client(tmp_path: Path) -> Iterator[dict]:
                     "culture_id": culture.id,
                     "owner_creation_id": owner_creation.id,
                     "other_creation_id": other_creation.id,
+                    "pending_creation_id": pending_creation.id,
                 }
             )
             await session.commit()
@@ -335,6 +345,20 @@ def test_only_creation_owner_or_admin_can_publish_ai_work(
         community_client,
         title="作者自己的 AI 作品",
         creation_id=community_client["state"]["owner_creation_id"],
+        cover_image_url="https://example.invalid/untrusted.webp",
     )
     assert created["creation_title"] == "作者的 AI 作品"
     assert created["creation_preview_url"] == "https://example.com/owner.webp"
+    assert created["cover_image_url"] == "https://example.com/owner.webp"
+
+    pending = community_client["client"].post(
+        "/api/v1/community/posts",
+        headers=community_client["headers"]["owner"],
+        json={
+            "title": "Pending work is not publishable",
+            "content": "A PENDING creation must be rejected.",
+            "creation_id": community_client["state"]["pending_creation_id"],
+            "tags": [],
+        },
+    )
+    assert pending.status_code == 409

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import CommunityCommentsPanel from '@/components/CommunityCommentsPanel.vue'
 import CommunityComposer from '@/components/CommunityComposer.vue'
 import CommunityPostCard from '@/components/CommunityPostCard.vue'
@@ -15,9 +16,12 @@ import '@/community/community.css'
 
 type FilterKey = 'ALL' | 'AI' | 'CAMPUS' | 'CULTURE'
 
+const route = useRoute()
 const posts = ref<CommunityPost[]>([])
 const cultures = ref<CultureOption[]>([])
 const creations = ref<CreationOption[]>([])
+const initialCreation = ref<CreationOption | null>(null)
+const initialCreationError = ref('')
 const loading = ref(true)
 const error = ref('')
 const notice = ref('')
@@ -35,6 +39,10 @@ const commentsSubmitting = ref(false)
 const commentsError = ref('')
 
 const loggedIn = computed(() => Boolean(localStorage.getItem('accessToken')))
+const initialCreationId = computed(() => {
+  const value = Number(route.query.creationId)
+  return Number.isInteger(value) && value > 0 ? value : null
+})
 const filters: Array<{ key: FilterKey; label: string }> = [
   { key: 'ALL', label: '全部' },
   { key: 'AI', label: 'AI作品' },
@@ -72,6 +80,19 @@ async function loadReferenceData() {
     )
   } catch {
     creations.value = []
+  }
+  if (!initialCreationId.value) return
+  try {
+    const { data } = await api.get(`/creations/${initialCreationId.value}`)
+    const requested = data.data as CreationOption
+    if (requested.status !== 'SUCCESS') {
+      initialCreationError.value = '该 AI 作品尚未生成成功，暂时不能关联发布。'
+      return
+    }
+    initialCreation.value = requested
+    if (!creations.value.some(item => item.id === requested.id)) creations.value.unshift(requested)
+  } catch (event) {
+    initialCreationError.value = `无法关联指定 AI 作品：${(event as Error).message}`
   }
 }
 
@@ -221,6 +242,8 @@ onMounted(async () => {
           ref="composer"
           :cultures="cultures"
           :creations="creations"
+          :initial-creation="initialCreation"
+          :initial-creation-error="initialCreationError"
           :logged-in="loggedIn"
           :submitting="submittingPost"
           @publish="publish"

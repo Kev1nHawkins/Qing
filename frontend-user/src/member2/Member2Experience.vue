@@ -27,6 +27,7 @@ const error = ref('')
 const keyword = ref('')
 const category = ref('全部')
 const question = ref('')
+const guideLoading = ref(false)
 const authForm = ref({ username: '', password: '' })
 const authLoading = ref(false)
 const authError = ref('')
@@ -82,12 +83,25 @@ function navigate(next: ViewName) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 function openCulture(item: Culture) { selected.value = item; navigate('detail') }
-function ask(text?: string) {
+async function ask(text?: string) {
   const content = (text || question.value).trim()
-  if (!content) return
+  if (!content || guideLoading.value) return
   messages.value.push({ from: 'user', text: content })
-  messages.value.push({ from: 'guide', text: '文化问答服务正在由成员 3 接入。当前你可以继续查看权威文化条目，或进入“红棉寻迹”体验校园中的文化线索。' })
   question.value = ''
+  guideLoading.value = true
+  try {
+    const { data } = await api.post<{ data: { answer: string } }>('/ai/chat', {
+      question: content,
+    })
+    messages.value.push({ from: 'guide', text: data.data.answer })
+  } catch (event) {
+    messages.value.push({
+      from: 'guide',
+      text: `问答服务暂时不可用：${(event as Error).message}`,
+    })
+  } finally {
+    guideLoading.value = false
+  }
 }
 async function loadProfile() {
   const [me, badgeList, creationList, pointList] = await Promise.all([
@@ -230,7 +244,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
       <template v-else-if="view === 'guide'">
         <section class="m2-page-head"><p class="m2-kicker">AI CULTURE GUIDE</p><h1>你好，我是小棉</h1><p>以木棉为文化名片，陪你连接广州城市记忆与广州大学校园生活。</p></section>
-        <section class="m2-guide"><aside><XiaomianMascot /><h2>数字人 · 小棉</h2><p>岭南文化校园导览员</p><small>问答服务契约待成员 3 接入</small></aside><div class="m2-chat"><div class="m2-messages"><p v-for="(message,index) in messages" :key="index" :class="message.from">{{ message.text }}</p></div><div class="m2-prompts"><button @click="ask('木棉为什么是广州的市花？')">木棉与广州</button><button @click="ask('岭南文化在广大校园里有哪些线索？')">广大校园线索</button><button @click="ask('如何参加红棉寻迹？')">红棉寻迹</button></div><form @submit.prevent="ask()"><input v-model="question" aria-label="向小棉提问" placeholder="输入你想了解的岭南文化问题" /><button type="submit">发送</button></form></div></section>
+        <section class="m2-guide"><aside><XiaomianMascot /><h2>数字人 · 小棉</h2><p>岭南文化校园导览员</p><small>后端 RAG 问答 · Provider 由环境变量配置</small></aside><div class="m2-chat"><div class="m2-messages"><p v-for="(message,index) in messages" :key="index" :class="message.from">{{ message.text }}</p></div><div class="m2-prompts"><button :disabled="guideLoading" @click="ask('木棉为什么是广州的市花？')">木棉与广州</button><button :disabled="guideLoading" @click="ask('岭南文化在广大校园里有哪些线索？')">广大校园线索</button><button :disabled="guideLoading" @click="ask('如何参加红棉寻迹？')">红棉寻迹</button></div><form @submit.prevent="ask()"><input v-model="question" aria-label="向小棉提问" placeholder="输入你想了解的岭南文化问题" /><button type="submit" :disabled="guideLoading">{{ guideLoading ? '回答中…' : '发送' }}</button></form></div></section>
       </template>
 
       <template v-else-if="view === 'create'">
