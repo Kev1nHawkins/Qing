@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -17,8 +20,35 @@ from app.schemas.community import (
     PostUpdate,
 )
 from app.services.community import post_load_options, post_payload
+from app.services.task_evidence import read_image, upload_root
 
 router = APIRouter(prefix="/community", tags=["Community"])
+
+
+def write_community_image(content: bytes, suffix: str) -> str:
+    relative_key = (Path("community") / f"{uuid4().hex}{suffix}").as_posix()
+    root = upload_root()
+    target = (root / relative_key).resolve()
+    if root not in target.parents:
+        raise HTTPException(status_code=500, detail="上传目录配置无效")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("xb") as stream:
+        stream.write(content)
+    return f"/uploads/{relative_key}"
+
+
+@router.post("/uploads", status_code=201, summary="上传社区帖子图片")
+async def upload_community_image(request: Request, _: CurrentUser) -> dict:
+    content, mime_type, suffix = await read_image(request)
+    public_url = write_community_image(content, suffix)
+    return success(
+        {
+            "publicUrl": public_url,
+            "mimeType": mime_type,
+            "sizeBytes": len(content),
+        },
+        "上传成功",
+    )
 
 
 @router.get("/posts", summary="社区帖子列表")

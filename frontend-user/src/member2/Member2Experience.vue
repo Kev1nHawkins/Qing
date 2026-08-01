@@ -11,9 +11,22 @@ import gzuOfficialLogo from '@/assets/culture/gzu-official-logo.png'
 import type { Badge, CreationTemplate, Culture, CultureRoute, PageData, Post } from '@/types'
 
 type ViewName = 'home' | 'cultures' | 'detail' | 'guide' | 'create' | 'profile'
+const props = withDefaults(defineProps<{
+  initialView?: ViewName
+  embedded?: boolean
+}>(), {
+  initialView: 'home',
+  embedded: false,
+})
 const supportedViews: ViewName[] = ['home', 'cultures', 'detail', 'guide', 'create', 'profile']
 const requestedView = new URLSearchParams(window.location.search).get('view') as ViewName | null
-const view = ref<ViewName>(requestedView && supportedViews.includes(requestedView) ? requestedView : 'home')
+const view = ref<ViewName>(
+  props.embedded
+    ? props.initialView
+    : requestedView && supportedViews.includes(requestedView)
+      ? requestedView
+      : props.initialView,
+)
 const cultures = ref<Culture[]>([])
 const routes = ref<CultureRoute[]>([])
 const templates = ref<CreationTemplate[]>([])
@@ -76,12 +89,20 @@ async function loadPlatform() {
   if (results.some(result => result.status === 'rejected')) platformError.value = '部分服务暂时不可用，其余真实数据已正常展示。'
 }
 function navigate(next: ViewName) {
+  if (props.embedded && next !== 'detail') {
+    const routeMap: Record<Exclude<ViewName, 'detail'>, string> = {
+      home: '/', cultures: '/cultures', guide: '/guide', create: '/creation', profile: '/profile',
+    }
+    window.location.assign(routeMap[next])
+    return
+  }
   view.value = next
   const url = new URL(window.location.href)
   url.searchParams.set('view', next)
   window.history.replaceState(null, '', url)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+function openUniversityCampus() { window.location.assign('/routes') }
 function openCulture(item: Culture) { selected.value = item; navigate('detail') }
 async function ask(text?: string) {
   const content = (text || question.value).trim()
@@ -126,7 +147,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
 <template>
   <div class="m2-app">
-    <header class="m2-header">
+    <header v-if="!embedded" class="m2-header">
       <button class="m2-brand" type="button" aria-label="返回探索首页" @click="navigate('home')"><span>岭</span><b>岭潮共创<small>LINGNAN · GZHU</small></b><img class="m2-official-logo" :src="gzuOfficialLogo" alt="广州大学" /></button>
       <nav aria-label="成员2预览导航">
         <button :class="{ active: view === 'home' }" @click="navigate('home')">探索</button>
@@ -168,9 +189,9 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
         <section class="m2-section m2-campus-personalities">
           <div class="m2-section-head"><div><p class="m2-kicker">THREE CAMPUSES · ONE GZHU</p><h2>三种校园气质，一张广大文化地图</h2></div><img :src="gzuOfficialLogo" alt="广州大学" /></div>
           <div class="m2-campus-card-grid">
-            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、何世杰体育馆、校史馆和红色长廊为节点，连接学习、体育、商都记忆与红色文化。" :tags="['红棉寻迹','校园地标','学生共创']" />
-            <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" :tags="['校史记忆','老城文脉','社区连接']" />
-            <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" :tags="['黄埔研究院','科技创新','产学研共创']" />
+            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、何世杰体育馆、校史馆和红色长廊为节点，连接学习、体育、商都记忆与红色文化。" :tags="['红棉寻迹','校园地标','学生共创']" status="进入寻迹" interactive @select="openUniversityCampus" />
+            <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" :tags="['校史记忆','老城文脉','社区连接']" status="尚未开放" />
+            <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" :tags="['黄埔研究院','科技创新','产学研共创']" status="尚未开放" />
           </div>
         </section>
 

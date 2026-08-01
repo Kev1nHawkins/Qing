@@ -79,6 +79,24 @@ class RAGService:
             item for item in retrieved if float(item.get("score", 0.0)) >= self.min_score
         ]
         if not qualified:
+            if self.external_provider:
+                try:
+                    answer = await self.llm_service.answer_general(clean_question)
+                    return RAGAnswer(
+                        clean_question,
+                        answer,
+                        True,
+                        [],
+                        mode="GENERAL_DEEPSEEK",
+                        provider=self.external_provider,
+                        model=self.external_model or "",
+                        fallback_used=False,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "General external LLM unavailable; using safe fallback: %s",
+                        type(exc).__name__,
+                    )
             return RAGAnswer(clean_question, self.FALLBACK_ANSWER, False, [])
 
         context = self._build_context(qualified)
