@@ -2,7 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/services/api'
-const form = reactive({ username: 'admin', password: 'Admin123!' })
+const form = reactive({ username: '', password: '' })
 const error = ref('')
 const router = useRouter()
 async function submit() {

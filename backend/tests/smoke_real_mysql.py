@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
@@ -17,6 +18,10 @@ if str(BACKEND_ROOT) not in sys.path:
 BASE_URL = os.getenv("SMOKE_BASE_URL", "http://127.0.0.1:8000")
 USE_TESTCLIENT = os.getenv("SMOKE_USE_TESTCLIENT") == "1"
 results: list[dict] = []
+SMOKE_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk"
+    "YAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+)
 
 
 def compact(data):
@@ -87,7 +92,11 @@ def main() -> None:
 
         client_context = TestClient(app, base_url=BASE_URL)
     else:
-        client_context = httpx.Client(base_url=BASE_URL, timeout=10.0)
+        client_context = httpx.Client(
+            base_url=BASE_URL,
+            timeout=10.0,
+            trust_env=False,
+        )
 
     with client_context as client:
         call(client, "health", "GET", "/health")
@@ -126,7 +135,17 @@ def main() -> None:
         route_detail = call(
             client, "route_detail", "GET", f"/api/v1/routes/{route_id}"
         )
-        task_id = route_detail["data"]["tasks"][0]["id"]
+        check_in_task = next(
+            (
+                task
+                for task in route_detail["data"]["tasks"]
+                if task["task_type"] == "CHECK_IN"
+            ),
+            None,
+        )
+        if not check_in_task:
+            raise AssertionError("seed route does not contain a CHECK_IN task")
+        task_id = check_in_task["id"]
         call(
             client,
             "route_start",
@@ -134,6 +153,20 @@ def main() -> None:
             f"/api/v1/routes/{route_id}/start",
             token=user_token,
         )
+        evidence = call(
+            client,
+            "task_evidence_upload",
+            "POST",
+            f"/api/v1/tasks/{task_id}/evidence",
+            token=user_token,
+            content=SMOKE_PNG,
+            headers={
+                "Content-Type": "image/png",
+                "X-File-Name": "smoke-check-in.png",
+            },
+            expected_status=201,
+        )
+        completion_payload = {"file_asset_id": evidence["data"]["id"]}
 
         first_complete = call(
             client,
@@ -141,7 +174,7 @@ def main() -> None:
             "POST",
             f"/api/v1/tasks/{task_id}/complete",
             token=user_token,
-            json={},
+            json=completion_payload,
         )
         first_total = first_complete["data"]["pointsTotal"]
         points = call(
@@ -157,7 +190,7 @@ def main() -> None:
             "POST",
             f"/api/v1/tasks/{task_id}/complete",
             token=user_token,
-            json={},
+            json=completion_payload,
         )
         if not duplicate_complete["data"]["alreadyCompleted"]:
             raise AssertionError("duplicate task completion was not reported as idempotent")
