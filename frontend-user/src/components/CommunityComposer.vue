@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import CommunityIcon from '@/components/CommunityIcon.vue'
 import MediaImage from '@/components/MediaImage.vue'
+import { api } from '@/services/api'
 import type { CreationOption, CultureOption, PublishPostPayload } from '@/types/community'
 
 const props = defineProps<{
@@ -15,6 +16,8 @@ const props = defineProps<{
 const emit = defineEmits<{ publish: [payload: PublishPostPayload] }>()
 const form = reactive({ title: '', content: '', cultureItemId: '', creationId: '', coverImageUrl: '', tags: '' })
 const localError = ref('')
+const uploadingImage = ref(false)
+const imageInput = ref<HTMLInputElement | null>(null)
 const characterCount = computed(() => form.content.length)
 const selectedCreation = computed(() => props.creations.find(item => String(item.id) === form.creationId) || null)
 
@@ -40,6 +43,7 @@ function submit() {
   localError.value = ''
   if (!props.loggedIn) return void (localError.value = '请先登录，再发布你的文化作品。')
   if (!form.title.trim() || !form.content.trim()) return void (localError.value = '请填写标题和正文。')
+  if (uploadingImage.value) return void (localError.value = '图片仍在上传，请稍候。')
   if (selectedCreation.value?.status !== 'SUCCESS' && form.creationId) return void (localError.value = '只有生成成功的 AI 作品可以发布。')
   emit('publish', {
     title: form.title.trim(),
@@ -51,8 +55,50 @@ function submit() {
   })
 }
 
+async function selectImage(event: Event) {
+  localError.value = ''
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  if (!props.loggedIn) {
+    localError.value = '请先登录，再添加帖子图片。'
+    input.value = ''
+    return
+  }
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    localError.value = '仅支持 JPG、PNG 或 WebP 图片。'
+    input.value = ''
+    return
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    localError.value = '图片大小不能超过 8 MB。'
+    input.value = ''
+    return
+  }
+  uploadingImage.value = true
+  try {
+    const { data } = await api.post<{ data: { publicUrl: string } }>(
+      '/community/uploads',
+      file,
+      { headers: { 'Content-Type': file.type } },
+    )
+    form.coverImageUrl = data.data.publicUrl
+  } catch (event) {
+    localError.value = (event as Error).message
+    input.value = ''
+  } finally {
+    uploadingImage.value = false
+  }
+}
+
+function removeImage() {
+  form.coverImageUrl = ''
+  if (imageInput.value) imageInput.value.value = ''
+}
+
 function reset() {
   Object.assign(form, { title: '', content: '', cultureItemId: '', creationId: '', coverImageUrl: '', tags: '' })
+  if (imageInput.value) imageInput.value.value = ''
 }
 defineExpose({ reset })
 </script>
@@ -72,7 +118,21 @@ defineExpose({ reset })
         <MediaImage :src="selectedCreation.output_url" :alt="selectedCreation.title" />
         <div><strong>{{ selectedCreation.title }}</strong><span>{{ selectedCreation.generationMode || '生成模式未知' }}</span><small>发布时封面由后端根据该作品确定</small></div>
       </section>
-      <label v-else><span>普通帖子封面地址（可选）</span><input v-model="form.coverImageUrl" type="url" placeholder="https://…" /></label>
+      <section v-else class="composer-media">
+        <span>添加图片（可选）</span>
+        <div class="composer-media-actions">
+          <label class="composer-upload-button">
+            <input ref="imageInput" type="file" accept="image/jpeg,image/png,image/webp" @change="selectImage" />
+            {{ uploadingImage ? '正在上传…' : form.coverImageUrl ? '更换图片' : '选择本地图片' }}
+          </label>
+          <button v-if="form.coverImageUrl" type="button" @click="removeImage">移除图片</button>
+        </div>
+        <div v-if="form.coverImageUrl" class="composer-image-preview">
+          <MediaImage :src="form.coverImageUrl" alt="待发布帖子图片预览" />
+        </div>
+        <label><span>或填写图片地址</span><input v-model="form.coverImageUrl" type="url" placeholder="https://…" /></label>
+        <small>支持 JPG、PNG、WebP，最大 8 MB；上传成功后再随帖子发布。</small>
+      </section>
       <label><span>文化标签</span><input v-model="form.tags" placeholder="木棉，广彩，校园文化" /></label>
       <p v-if="localError" class="composer-error">{{ localError }}</p>
       <RouterLink v-if="!loggedIn" class="composer-login" to="/login">登录后参与共创</RouterLink>
@@ -83,4 +143,5 @@ defineExpose({ reset })
 
 <style scoped>
 .community-composer{padding:24px;background:#fff;border:1px solid #ded8ce;border-radius:14px}.composer-title{display:flex;justify-content:space-between;align-items:start}.composer-title h2{margin:0}.composer-title p{margin:5px 0 18px;color:#756d65}.community-composer form,.community-composer label{display:grid;gap:7px}.community-composer form{gap:14px}.community-composer label span{font-size:12px;font-weight:800}.community-composer input,.community-composer textarea,.community-composer select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d9d1c6;border-radius:8px;background:#fff}.composer-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.creation-preview{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:10px;background:#edf3ef;border-radius:9px}.creation-preview :deep(.media-image){height:130px;border-radius:6px}.creation-preview div{display:grid;align-content:center;gap:6px}.creation-preview span,.creation-preview small{color:#5f6c65;font-size:11px}.composer-error{margin:0;padding:10px;color:#8e2730;background:#f8e7e5;border-radius:7px}.composer-submit,.composer-login{display:grid;place-items:center;min-height:46px;border:0;border-radius:7px;color:#fff;background:#9f2d35;font-weight:800}.composer-login{background:#285a47}@media(max-width:560px){.composer-row{grid-template-columns:1fr}.creation-preview{grid-template-columns:90px 1fr}}
+.composer-media{display:grid;gap:9px}.composer-media>span{font-size:12px;font-weight:800}.composer-media-actions{display:flex;gap:8px}.composer-upload-button,.composer-media-actions>button{display:grid;place-items:center;min-height:42px;padding:0 14px;border:1px solid #cfd7d1;border-radius:8px;color:#285a47;background:#edf3ef;font-weight:800;cursor:pointer}.composer-upload-button input{display:none}.composer-media-actions>button{color:#8e2730;background:#fff}.composer-image-preview{height:210px;overflow:hidden;border-radius:8px}.composer-media>small{color:#69736e;font-size:11px}
 </style>
