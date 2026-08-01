@@ -47,5 +47,9 @@ async def chat(
             campus=suggestion.campus,
             style=suggestion.style,
         ),
+        mode=result.mode,
+        provider=result.provider,
+        model=result.model,
+        fallback_used=result.fallback_used,
     )
-    return success(data.model_dump())
+    return success(data.model_dump(by_alias=True))
