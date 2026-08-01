@@ -29,7 +29,13 @@ const creation = ref<Creation | null>(null)
 const generating = ref(false)
 const feedback = ref('')
 const feedbackKind = ref<'info' | 'success' | 'error'>('info')
+const saveFeedback = ref('')
+const savingImage = ref(false)
 const isAuthenticated = computed(() => Boolean(localStorage.getItem('accessToken')))
+const isMobileDevice = computed(() => {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+})
 const cultureItemId = computed(
   () => props.template?.culture_item_id || props.cultures[0]?.id || null,
 )
@@ -73,6 +79,7 @@ async function generatePoster() {
     return
   }
   generating.value = true
+  saveFeedback.value = ''
   creation.value = null
   feedback.value = '正在提交独立创作任务，生成成功前不会显示模板预览。'
   feedbackKind.value = 'info'
@@ -93,6 +100,58 @@ async function generatePoster() {
     feedbackKind.value = 'error'
   } finally {
     generating.value = false
+  }
+}
+
+function imageFileName(blob: Blob) {
+  const safeTitle = (creation.value?.title || '岭潮文化海报')
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .slice(0, 60)
+  const extension = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg'
+  return `${safeTitle}.${extension}`
+}
+
+async function savePosterImage() {
+  const url = creation.value?.resultUrl || creation.value?.output_url
+  if (!url || savingImage.value) return
+  savingImage.value = true
+  saveFeedback.value = ''
+  try {
+    const response = await fetch(new URL(url, window.location.origin))
+    if (!response.ok) throw new Error('图片下载失败')
+    const blob = await response.blob()
+    const filename = imageFileName(blob)
+    const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
+    if (
+      isMobileDevice.value
+      && typeof navigator.share === 'function'
+      && typeof navigator.canShare === 'function'
+      && navigator.canShare({ files: [file] })
+    ) {
+      await navigator.share({ files: [file], title: creation.value?.title || '岭潮文化海报' })
+      saveFeedback.value = '已打开系统保存/分享面板。'
+      return
+    }
+    const objectUrl = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500)
+    saveFeedback.value = isMobileDevice.value
+      ? '已打开图片保存；如浏览器未自动保存，请长按图片保存到相册。'
+      : '图片已交给浏览器下载。'
+  } catch (event) {
+    if ((event as Error).name === 'AbortError') {
+      saveFeedback.value = '已取消保存。'
+    } else {
+      window.open(new URL(url, window.location.origin), '_blank', 'noopener,noreferrer')
+      saveFeedback.value = '自动保存失败，已打开原图；可长按或使用浏览器另存为。'
+    }
+  } finally {
+    savingImage.value = false
   }
 }
 
@@ -144,6 +203,10 @@ async function refreshStatus() {
           <small v-else-if="creation.generationMode === 'MOCK_TEMPLATE'">本图来自本地 SVG 模板，不是 AI 图片模型生成</small>
           <small v-else-if="creation.generationMode === 'AI_TEXT_TEMPLATE'">DeepSeek 生成文案与视觉 Prompt，背景由本地模板渲染</small>
           <small v-else>图片由已配置的独立图像 Provider 返回</small>
+          <button class="poster-save" type="button" :disabled="savingImage" @click="savePosterImage">
+            {{ savingImage ? '正在准备…' : isMobileDevice ? '保存图片到手机' : '下载生成图片' }}
+          </button>
+          <small v-if="saveFeedback" class="save-feedback" role="status">{{ saveFeedback }}</small>
         </div>
       </div>
       <div v-else-if="creation.status === 'FAILED'" class="poster-state failed"><b>生成失败</b><p>{{ creation.error_message }}</p></div>
@@ -154,4 +217,5 @@ async function refreshStatus() {
 
 <style scoped>
 .poster-studio{display:grid;grid-template-columns:minmax(340px,.8fr) minmax(420px,1.2fr);min-height:690px;overflow:hidden;border:1px solid #dfe3dd;border-radius:8px;background:#fff}.poster-controls{padding:36px}.studio-step{display:flex;align-items:center;gap:14px}.studio-step>span{display:grid;place-items:center;width:46px;height:46px;color:#fff;background:#9f2d35;font-family:serif;font-size:20px}.studio-step small{color:#9f2d35;font-size:9px;font-weight:900}.studio-step h2{margin:4px 0 0;font-size:27px}.poster-controls>p{color:#66716b;font-size:13px;line-height:1.75}.poster-controls fieldset{margin:24px 0 0;padding:0;border:0}.poster-controls legend{margin-bottom:10px;font-size:13px;font-weight:800}.poster-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.poster-options button{min-height:42px;padding:7px;border:1px solid #dfe3dd;border-radius:6px;color:#53605a;background:#fff}.poster-options button.active{color:#fff;background:#285a47;border-color:#285a47}.selection-summary{display:grid;gap:4px;margin-top:26px;padding:14px 16px;background:#f2f5f1;border-left:3px solid #cb9138}.selection-summary small{color:#66716b}.selection-summary strong{font-size:12px}.studio-generate{width:100%;min-height:50px;margin-top:16px;border:0;border-radius:6px;color:#fff;background:#9f2d35;font-weight:800}.studio-generate:disabled{opacity:.6}.studio-feedback{margin:12px 0 0!important;padding:10px 12px;border-radius:5px;background:#eef2ef}.studio-feedback.success{color:#245b47;background:#e7f2ec}.studio-feedback.error{color:#8e2730;background:#f8e7e5}.studio-refresh{margin-top:8px;padding:8px 0;border:0;color:#9f2d35;background:transparent;font-weight:800}.studio-publish{display:flex;align-items:center;justify-content:center;min-height:46px;margin-top:10px;color:#fff;background:#285a47;border-radius:6px;font-weight:800}.poster-canvas-shell{display:grid;place-items:center;min-width:0;padding:42px;background:#e7ece7}.poster-empty,.poster-state{width:min(420px,100%);text-align:center}.poster-empty>span{color:#9f2d35;font-family:serif;font-weight:800}.empty-sheet{position:relative;width:230px;height:330px;margin:18px auto 26px;background:#f8faf7;border:1px solid #cfd7d1;box-shadow:12px 14px 0 #d2dbd4}.empty-sheet:before{content:"";position:absolute;inset:14px;border:1px dashed #cad2cc}.empty-sheet i{position:absolute;left:42px;right:42px;height:8px;background:#e0e6e1}.empty-sheet i:nth-child(1){top:75px}.empty-sheet i:nth-child(2){top:96px}.empty-sheet i:nth-child(3){left:78px;right:78px;bottom:65px}.poster-empty p,.poster-state p{color:#66716b}.poster-result{position:relative;width:min(470px,100%);aspect-ratio:4/5;box-shadow:0 22px 48px rgba(43,57,49,.23)}.result-meta{position:absolute;left:12px;right:12px;bottom:12px;display:grid;gap:3px;padding:11px 13px;color:#fff;background:rgba(18,39,31,.88);border-radius:6px}.result-meta span,.result-meta small{font-size:11px}.poster-state{padding:35px;background:#fff;border-radius:12px}.poster-state.failed{color:#8e2730}.studio-spinner{display:block;width:40px;height:40px;margin:0 auto 18px;border:4px solid #cbd8d1;border-top-color:#285a47;border-radius:50%;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:900px){.poster-studio{grid-template-columns:1fr}.poster-canvas-shell{min-height:620px}}@media(max-width:560px){.poster-controls{padding:24px}.poster-options{grid-template-columns:1fr}.poster-canvas-shell{min-height:520px;padding:22px}}
+.poster-save{min-height:36px;margin-top:7px;border:1px solid rgba(255,255,255,.55);border-radius:6px;color:#244f3f;background:#fff;font-weight:800;cursor:pointer}.poster-save:disabled{opacity:.65}.save-feedback{color:#e7d38d}
 </style>
