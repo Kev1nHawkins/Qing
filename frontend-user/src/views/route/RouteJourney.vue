@@ -25,7 +25,6 @@ import type {
   UserBadge,
 } from '@/types'
 
-const emit = defineEmits<{ login: []; create: [] }>()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -205,6 +204,14 @@ function selectTask(task: RouteTask) {
 
 function requestLogin(redirect = '/routes/journey') {
   router.push({ path: '/login', query: { redirect } })
+}
+
+function goToCreation() {
+  if (!isLoggedIn.value) {
+    requestLogin('/creation')
+    return
+  }
+  router.push('/creation')
 }
 
 async function startRoute() {
@@ -390,7 +397,7 @@ onBeforeUnmount(() => {
       <section v-if="selectedProgress?.progressPercent === 100 && selectedRoute" class="route-certificate">
         <span>岭潮</span>
         <div><p>ROUTE COMPLETION · CAMPUS CULTURE</p><h2>{{ selectedRoute.title }}探索证书</h2><small>已完成 {{ selectedProgress.totalTasks }} 个任务，获得 {{ earnedRoutePoints }} 路线积分。继续把校园发现带入 AI 共创与社区传播。</small></div>
-        <button type="button" @click="emit('create')">继续共创 →</button>
+        <button type="button" @click="goToCreation">继续共创 →</button>
       </section>
 
       <section class="achievement-board">
@@ -401,7 +408,7 @@ onBeforeUnmount(() => {
             <div><b>{{ badge.name }}</b><p>{{ badge.description }}</p><small>{{ badge.rule_type }} ≥ {{ badge.rule_value }}</small></div>
           </article>
         </div>
-        <button v-if="selectedProgress?.progressPercent === 100" class="create-next" type="button" @click="emit('create')">路线完成，进入 AI 共创 →</button>
+        <button v-if="selectedProgress?.progressPercent === 100" class="create-next" type="button" @click="goToCreation">路线完成，进入 AI 共创 →</button>
       </section>
     </template>
 

@@ -15,14 +15,14 @@ from app.services.ai.llm_service import (
 
 
 class DeepSeekLLM(LLMAdapter):
-    """使用 deepseek-chat 模型的异步 LLM Adapter。"""
-
-    MODEL = "deepseek-chat"
+    """DeepSeek Chat Completions 异步 Adapter。"""
 
     def __init__(
         self,
         api_key: str | None,
         base_url: str = "https://api.deepseek.com",
+        model: str = "deepseek-v4-flash",
+        temperature: float = 0.7,
         timeout_seconds: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
@@ -36,6 +36,8 @@ class DeepSeekLLM(LLMAdapter):
 
         self._api_key = clean_key
         self.base_url = base_url.rstrip("/")
+        self.model = model.strip()
+        self.temperature = temperature
         self.timeout_seconds = timeout_seconds
         self._transport = transport
 
@@ -51,6 +53,8 @@ class DeepSeekLLM(LLMAdapter):
         return cls(
             api_key=api_key,
             base_url=settings.deepseek_base_url,
+            model=settings.deepseek_model,
+            temperature=settings.deepseek_temperature,
             timeout_seconds=settings.deepseek_timeout_seconds,
             transport=transport,
         )
@@ -73,10 +77,10 @@ class DeepSeekLLM(LLMAdapter):
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": self.MODEL,
+                        "model": self.model,
                         "messages": [{"role": "user", "content": clean_prompt}],
                         "stream": False,
-                        "temperature": 0,
+                        "temperature": self.temperature,
                     },
                 )
         except httpx.RequestError as exc:

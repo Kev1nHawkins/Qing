@@ -16,6 +16,11 @@ const router = createRouter({
       component: () => import('@/views/route/LibraryQuiz.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/creation',
+      component: () => import('@/views/CreationView.vue'),
+      meta: { requiresAuth: true },
+    },
     { path: '/community', component: () => import('@/views/CommunityView.vue') },
     { path: '/profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/login', component: () => import('@/views/LoginView.vue') },

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     llm_provider: str = "mock"
     deepseek_api_key: SecretStr | None = None
     deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-v4-flash"
+    deepseek_temperature: float = 0.7
     deepseek_timeout_seconds: float = 30.0
     image_generator_provider: str = "mock"
     zhipu_api_key: SecretStr | None = None

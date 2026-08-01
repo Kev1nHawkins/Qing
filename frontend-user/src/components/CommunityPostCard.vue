@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CommunityIcon from '@/components/CommunityIcon.vue'
+import MediaImage from '@/components/MediaImage.vue'
 import type { CommunityPost } from '@/types/community'
 
 defineProps<{
@@ -60,7 +61,7 @@ function formatTime(value: string) {
     </header>
 
     <div class="post-body" :class="{ 'post-body--with-media': featured && (post.cover_image_url || post.creation_preview_url) }">
-      <img
+      <MediaImage
         v-if="post.cover_image_url || post.creation_preview_url"
         class="post-cover"
         :src="post.cover_image_url || post.creation_preview_url || ''"

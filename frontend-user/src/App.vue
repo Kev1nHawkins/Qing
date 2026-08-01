@@ -13,6 +13,12 @@ async function restoreSession() {
     await auth.fetchMe()
   } catch {
     auth.logout()
+    if (router.currentRoute.value.meta.requiresAuth) {
+      await router.replace({
+        path: '/login',
+        query: { redirect: router.currentRoute.value.fullPath },
+      })
+    }
   }
 }
 
@@ -48,8 +54,8 @@ onMounted(restoreSession)
       <RouterLink to="/">探索</RouterLink>
       <RouterLink to="/cultures">文化</RouterLink>
       <RouterLink to="/routes">寻迹</RouterLink>
+      <RouterLink to="/creation">共创</RouterLink>
       <RouterLink to="/community">社区</RouterLink>
-      <RouterLink to="/profile">我的</RouterLink>
     </nav>
   </div>
 </template>

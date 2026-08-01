@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import Future
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -14,19 +13,23 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.api.dependencies import get_current_user
+from app.core.config import Settings
 from app.core.database import get_db
 from app.main import app
 from app.models import Base
 from app.models.creation import CreationTemplate
 from app.models.enums import PublishStatus
 from app.services.creation.exceptions import ImageGenerationResponseError
+from app.services.creation.content_service import CreationContentService
 from app.services.creation.image_generator import ImageGeneratorAdapter, MockImageGenerator
 from app.services.creation.task_runner import CreationTaskRunner, get_creation_task_runner
 
 
-class HoldingExecutor:
-    def submit(self, fn: Any, /, *args: Any, **kwargs: Any) -> Future[Any]:
-        return Future()
+class DeferredCreationTaskRunner(CreationTaskRunner):
+    """Keep API tests deterministic while process() is exercised explicitly."""
+
+    def submit(self, creation_id: int) -> None:
+        return None
 
 
 class FailingImageGenerator(ImageGeneratorAdapter):
@@ -119,10 +122,9 @@ def creation_harness(
 
     template_id = asyncio.run(prepare_database())
     generator_factory = SwitchableGeneratorFactory(tmp_path / "generated")
-    runner = CreationTaskRunner(
+    runner = DeferredCreationTaskRunner(
         session_factory=session_factory,
         generator_factory=generator_factory,
-        executor=HoldingExecutor(),
     )
 
     async def override_get_db() -> Any:
@@ -178,7 +180,41 @@ def test_mock_generation_reaches_success(creation_harness: CreationHarness) -> N
     completed = creation_harness.get(creation["id"])
     assert completed["status"] == "SUCCESS"
     assert completed["output_url"].endswith(f"/creation_{creation['id']}.svg")
+    assert completed["resultUrl"] == completed["output_url"]
+    assert completed["thumbnailUrl"] == completed["output_url"]
+    assert completed["generationMode"] == "MOCK_TEMPLATE"
+    assert completed["provider"] == "mock"
+    assert completed["fallbackUsed"] is False
+    assert completed["tags"]
     assert completed["error_message"] is None
+
+
+def test_mock_generation_uses_distinct_template_variants(
+    creation_harness: CreationHarness,
+) -> None:
+    first = creation_harness.create()
+    second = creation_harness.create()
+    creation_harness.process(first["id"])
+    creation_harness.process(second["id"])
+
+    output_dir = creation_harness.generator_factory.output_dir
+    first_path = output_dir / f"creation_{first['id']}.svg"
+    second_path = output_dir / f"creation_{second['id']}.svg"
+    assert first_path.read_text(encoding="utf-8") != second_path.read_text(encoding="utf-8")
+
+
+def test_deepseek_configuration_failure_is_explicit_fallback() -> None:
+    service = CreationContentService(
+        Settings(llm_provider="deepseek", deepseek_api_key=None)
+    )
+    content = asyncio.run(
+        service.generate(
+            base_prompt="kapok poster",
+            options={"culture_element": "kapok"},
+        )
+    )
+    assert content.text_provider == "local-template"
+    assert content.fallback_used is True
 
 
 def test_generation_failure_is_persisted(creation_harness: CreationHarness) -> None:

@@ -92,6 +92,7 @@ async def get_post(post_id: int, db: DbSession) -> dict:
 async def create_post(
     payload: PostCreate, db: DbSession, current_user: CurrentUser
 ) -> dict:
+    creation: AICreation | None = None
     if payload.culture_item_id:
         culture = await db.get(CultureItem, payload.culture_item_id)
         if not culture or culture.status != PublishStatus.PUBLISHED.value:
@@ -109,6 +110,16 @@ async def create_post(
             raise HTTPException(status_code=409, detail="AI 作品尚未生成成功")
 
     data = payload.model_dump(exclude={"tags"})
+    if creation is not None:
+        if not creation.output_url or not (
+            creation.output_url.startswith("/uploads/")
+            or creation.output_url.startswith("https://")
+            or creation.output_url.startswith("http://")
+        ):
+            raise HTTPException(status_code=409, detail="AI 作品缺少可发布的图片结果")
+        data["cover_image_url"] = creation.output_url
+        if data["culture_item_id"] is None:
+            data["culture_item_id"] = creation.culture_item_id
     post = Post(
         **data,
         author_id=current_user.id,

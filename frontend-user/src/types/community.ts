@@ -42,7 +42,14 @@ export interface CreationOption {
   id: number
   title: string
   status: string
+  culture_item_id?: number | null
   output_url?: string | null
+  description?: string | null
+  generationMode?: string
+  fallbackUsed?: boolean
+  provider?: string
+  model?: string
+  tags?: string[]
 }
 
 export interface PublishPostPayload {
