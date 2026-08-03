@@ -5,6 +5,7 @@ const router = createRouter({
   routes: [
     { path: '/login', component: () => import('@/views/LoginView.vue') },
     { path: '/', component: () => import('@/views/DashboardView.vue') },
+    { path: '/users', component: () => import('@/views/UserManageView.vue') },
     { path: '/cultures', component: () => import('@/views/CultureManageView.vue') },
     {
       path: '/routes',
@@ -17,8 +18,7 @@ const router = createRouter({
     },
     {
       path: '/posts',
-      component: () => import('@/views/PlaceholderView.vue'),
-      props: { title: '社区审核', note: '由成员 5 在此接入帖子审核与下架操作。' },
+      component: () => import('@/views/PostManageView.vue'),
     },
   ],
 })

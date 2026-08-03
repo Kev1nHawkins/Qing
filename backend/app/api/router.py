@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api import (
     admin,
+    ai,
     auth,
     badge,
     community,
@@ -15,6 +16,7 @@ from app.api import (
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
+api_router.include_router(ai.router)
 api_router.include_router(culture.router)
 api_router.include_router(location.router)
 api_router.include_router(route.router)

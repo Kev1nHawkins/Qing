@@ -18,6 +18,18 @@ dist/
 uploads/*
 !uploads/.gitkeep
 work/
+
+# AI runtime data: rebuild or regenerate locally; never commit generated content.
+data/vector_store/*
+!data/vector_store/.gitkeep
+backend/work/
+backend/.cache/
+.cache/huggingface/
+backend/uploads/ai-generated/*
+!backend/uploads/ai-generated/.gitkeep
+static/generated/*
+!static/generated/.gitkeep
+
 *.log
 *.sqlite
 *.sqlite3

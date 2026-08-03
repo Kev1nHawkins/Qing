@@ -2,15 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import './member2/member2.css'
-import './member2/member2-integrated.css'
-import './member2/member2-profile.css'
-import './member2/member2-polish.css'
-import './member2/member2-theme-details.css'
-import './member2/member2-theme-brand.css'
-import './member2/member2-logo-transparent.css'
-import './member2/member2-campus-cards.css'
-import './member2/member2-flow.css'
-import './member2/member2-poster-variants.css'
+import './styles.css'
 
 createApp(App).use(createPinia()).use(router).mount('#app')
+

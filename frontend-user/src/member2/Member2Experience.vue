@@ -11,9 +11,22 @@ import gzuOfficialLogo from '@/assets/culture/gzu-official-logo.png'
 import type { Badge, CreationTemplate, Culture, CultureRoute, PageData, Post } from '@/types'
 
 type ViewName = 'home' | 'cultures' | 'detail' | 'guide' | 'create' | 'profile'
+const props = withDefaults(defineProps<{
+  initialView?: ViewName
+  embedded?: boolean
+}>(), {
+  initialView: 'home',
+  embedded: false,
+})
 const supportedViews: ViewName[] = ['home', 'cultures', 'detail', 'guide', 'create', 'profile']
 const requestedView = new URLSearchParams(window.location.search).get('view') as ViewName | null
-const view = ref<ViewName>(requestedView && supportedViews.includes(requestedView) ? requestedView : 'home')
+const view = ref<ViewName>(
+  props.embedded
+    ? props.initialView
+    : requestedView && supportedViews.includes(requestedView)
+      ? requestedView
+      : props.initialView,
+)
 const cultures = ref<Culture[]>([])
 const routes = ref<CultureRoute[]>([])
 const templates = ref<CreationTemplate[]>([])
@@ -27,6 +40,7 @@ const error = ref('')
 const keyword = ref('')
 const category = ref('全部')
 const question = ref('')
+const guideLoading = ref(false)
 const authForm = ref({ username: '', password: '' })
 const authLoading = ref(false)
 const authError = ref('')
@@ -75,19 +89,40 @@ async function loadPlatform() {
   if (results.some(result => result.status === 'rejected')) platformError.value = '部分服务暂时不可用，其余真实数据已正常展示。'
 }
 function navigate(next: ViewName) {
+  if (props.embedded && next !== 'detail') {
+    const routeMap: Record<Exclude<ViewName, 'detail'>, string> = {
+      home: '/', cultures: '/cultures', guide: '/guide', create: '/creation', profile: '/profile',
+    }
+    window.location.assign(routeMap[next])
+    return
+  }
   view.value = next
   const url = new URL(window.location.href)
   url.searchParams.set('view', next)
   window.history.replaceState(null, '', url)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+function openUniversityCampus() { window.location.assign('/routes') }
 function openCulture(item: Culture) { selected.value = item; navigate('detail') }
-function ask(text?: string) {
+async function ask(text?: string) {
   const content = (text || question.value).trim()
-  if (!content) return
+  if (!content || guideLoading.value) return
   messages.value.push({ from: 'user', text: content })
-  messages.value.push({ from: 'guide', text: '文化问答服务正在由成员 3 接入。当前你可以继续查看权威文化条目，或进入“红棉寻迹”体验校园中的文化线索。' })
   question.value = ''
+  guideLoading.value = true
+  try {
+    const { data } = await api.post<{ data: { answer: string } }>('/ai/chat', {
+      question: content,
+    })
+    messages.value.push({ from: 'guide', text: data.data.answer })
+  } catch (event) {
+    messages.value.push({
+      from: 'guide',
+      text: `问答服务暂时不可用：${(event as Error).message}`,
+    })
+  } finally {
+    guideLoading.value = false
+  }
 }
 async function loadProfile() {
   const [me, badgeList, creationList, pointList] = await Promise.all([
@@ -112,7 +147,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
 <template>
   <div class="m2-app">
-    <header class="m2-header">
+    <header v-if="!embedded" class="m2-header">
       <button class="m2-brand" type="button" aria-label="返回探索首页" @click="navigate('home')"><span>岭</span><b>岭潮共创<small>LINGNAN · GZHU</small></b><img class="m2-official-logo" :src="gzuOfficialLogo" alt="广州大学" /></button>
       <nav aria-label="成员2预览导航">
         <button :class="{ active: view === 'home' }" @click="navigate('home')">探索</button>
@@ -147,16 +182,16 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
         <section class="m2-campus-signals" aria-label="广州大学校园文化元素">
           <article class="m2-motto-tile"><div class="m2-gzhu-seal"><span>广大</span><small>1927</small></div><div><img class="m2-motto-logo" :src="gzuOfficialLogo" alt="广州大学官方标识" /><h3>博学笃行<br />与时俱进</h3><small>把大学精神写进每一次文化探索</small></div></article>
           <article class="m2-three-campus-tile"><p>THREE CAMPUSES</p><h3>一校三园 · 文化共生</h3><div><span><i>01</i>大学城校区</span><span><i>02</i>桂花岗校区</span><span><i>03</i>黄埔校区</span></div><small>共同构成广州大学校园文化地图</small></article>
-          <article class="m2-mini-route"><header><span>红棉寻迹<small>大学城校区示范线</small></span><b>2.3 KM</b></header><div class="m2-route-line"><i /><i /><i /><i /><i /></div><footer><span>正门</span><span>图书馆</span><span>红棉广场</span><span>校史点</span><span>文化墙</span></footer></article>
+          <article class="m2-mini-route"><header><span>红棉寻迹<small>大学城校区示范线</small></span><b>2.4 KM</b></header><div class="m2-route-line"><i /><i /><i /><i /><i /></div><footer><span>正门</span><span>图书馆</span><span>体育馆</span><span>校史馆</span><span>红色长廊</span></footer></article>
           <article class="m2-kapok-season"><div class="m2-kapok-symbol"><i /><i /><i /><i /><i /><b /></div><div><p>KAPOK SEASON</p><strong>03—04</strong><span>木棉花期 · 城市英雄花</span></div></article>
         </section>
 
         <section class="m2-section m2-campus-personalities">
           <div class="m2-section-head"><div><p class="m2-kicker">THREE CAMPUSES · ONE GZHU</p><h2>三种校园气质，一张广大文化地图</h2></div><img :src="gzuOfficialLogo" alt="广州大学" /></div>
           <div class="m2-campus-card-grid">
-            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、红棉广场和校园文化空间为节点，承载学习、生活与文化参与的完整体验。" :tags="['红棉寻迹','校园地标','学生共创']" />
-            <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" :tags="['校史记忆','老城文脉','社区连接']" />
-            <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" :tags="['黄埔研究院','科技创新','产学研共创']" />
+            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、何世杰体育馆、校史馆和红色长廊为节点，连接学习、体育、商都记忆与红色文化。" :tags="['红棉寻迹','校园地标','学生共创']" status="进入寻迹" interactive @select="openUniversityCampus" />
+            <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" :tags="['校史记忆','老城文脉','社区连接']" status="尚未开放" />
+            <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" :tags="['黄埔研究院','科技创新','产学研共创']" status="尚未开放" />
           </div>
         </section>
 
@@ -230,7 +265,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
       <template v-else-if="view === 'guide'">
         <section class="m2-page-head"><p class="m2-kicker">AI CULTURE GUIDE</p><h1>你好，我是小棉</h1><p>以木棉为文化名片，陪你连接广州城市记忆与广州大学校园生活。</p></section>
-        <section class="m2-guide"><aside><XiaomianMascot /><h2>数字人 · 小棉</h2><p>岭南文化校园导览员</p><small>问答服务契约待成员 3 接入</small></aside><div class="m2-chat"><div class="m2-messages"><p v-for="(message,index) in messages" :key="index" :class="message.from">{{ message.text }}</p></div><div class="m2-prompts"><button @click="ask('木棉为什么是广州的市花？')">木棉与广州</button><button @click="ask('岭南文化在广大校园里有哪些线索？')">广大校园线索</button><button @click="ask('如何参加红棉寻迹？')">红棉寻迹</button></div><form @submit.prevent="ask()"><input v-model="question" aria-label="向小棉提问" placeholder="输入你想了解的岭南文化问题" /><button type="submit">发送</button></form></div></section>
+        <section class="m2-guide"><aside><XiaomianMascot /><h2>数字人 · 小棉</h2><p>岭南文化校园导览员</p><small>后端 RAG 问答 · Provider 由环境变量配置</small></aside><div class="m2-chat"><div class="m2-messages"><p v-for="(message,index) in messages" :key="index" :class="message.from">{{ message.text }}</p></div><div class="m2-prompts"><button :disabled="guideLoading" @click="ask('木棉为什么是广州的市花？')">木棉与广州</button><button :disabled="guideLoading" @click="ask('岭南文化在广大校园里有哪些线索？')">广大校园线索</button><button :disabled="guideLoading" @click="ask('如何参加红棉寻迹？')">红棉寻迹</button></div><form @submit.prevent="ask()"><input v-model="question" aria-label="向小棉提问" placeholder="输入你想了解的岭南文化问题" /><button type="submit" :disabled="guideLoading">{{ guideLoading ? '回答中…' : '发送' }}</button></form></div></section>
       </template>
 
       <template v-else-if="view === 'create'">

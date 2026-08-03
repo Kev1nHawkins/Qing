@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.api.dependencies import AdminUser, DbSession
 from app.api.helpers import get_or_404, paginated
@@ -9,12 +9,13 @@ from app.core.response import success
 from app.models.community import Post
 from app.models.creation import AICreation
 from app.models.culture import CultureItem
-from app.models.enums import PointReason
+from app.models.enums import PointReason, PostStatus
 from app.models.points import PointRecord
 from app.models.route import UserTaskRecord
 from app.models.user import User
 from app.schemas.auth import UserRead
 from app.schemas.points import AdminPointAdjust, AdminPostReview
+from app.services.community import post_load_options, post_payload
 from app.services.points import award_points
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -63,6 +64,66 @@ async def list_users(
             page_size=page_size,
             schema=UserRead,
         )
+    )
+
+
+@router.get("/posts", summary="社区帖子审核列表")
+async def list_posts(
+    db: DbSession,
+    _: AdminUser,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
+    status: str | None = Query(
+        None,
+        pattern=r"^(PENDING|PUBLISHED|REJECTED|OFFLINE)$",
+    ),
+    keyword: str | None = Query(None, max_length=120),
+) -> dict:
+    filters = []
+    if status:
+        filters.append(Post.status == status)
+    if keyword:
+        normalized = f"%{keyword.strip()}%"
+        filters.append(
+            or_(
+                Post.title.ilike(normalized),
+                Post.content.ilike(normalized),
+                User.nickname.ilike(normalized),
+                User.username.ilike(normalized),
+            )
+        )
+
+    base = select(Post).join(User, User.id == Post.author_id).where(*filters)
+    count_stmt = (
+        select(func.count(Post.id))
+        .select_from(Post)
+        .join(User, User.id == Post.author_id)
+        .where(*filters)
+    )
+    total = int((await db.scalar(count_stmt)) or 0)
+    posts = (
+        await db.scalars(
+            base.options(*post_load_options())
+            .order_by(Post.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).all()
+    grouped = (
+        await db.execute(
+            select(Post.status, func.count(Post.id)).group_by(Post.status)
+        )
+    ).all()
+    status_counts = {item.value: 0 for item in PostStatus}
+    status_counts.update({item_status: int(count) for item_status, count in grouped})
+    return success(
+        {
+            "total": total,
+            "items": [post_payload(post) for post in posts],
+            "page": page,
+            "pageSize": page_size,
+            "statusCounts": status_counts,
+        }
     )
 
 

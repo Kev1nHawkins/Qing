@@ -12,31 +12,36 @@ $PidFile = Join-Path $WorkRoot "demo-host.pid.json"
 
 Set-Location -LiteralPath $RepoRoot
 
-docker info --format "{{.ServerVersion}}" | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "Docker Engine is unavailable. Start Docker Desktop normally and retry."
-}
-
-$mysqlState = (docker compose ps mysql --format json | Out-String).Trim()
-if ($mysqlState -notmatch '"Health":"healthy"') {
-    Write-Host "Starting the existing MySQL service without build or pull..."
-    docker compose up -d --no-build --pull never mysql
+$mysqlTcpReady = (Test-NetConnection 127.0.0.1 -Port 3306 -WarningAction SilentlyContinue).TcpTestSucceeded
+if (-not $mysqlTcpReady) {
+    docker info --format "{{.ServerVersion}}" | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "MySQL failed to start. Confirm that mysql:8.4 and the existing volume are present."
+        throw "MySQL is unreachable and Docker Engine is unavailable. Start Docker Desktop normally and retry."
     }
-}
 
-$mysqlReady = $false
-for ($attempt = 1; $attempt -le 24; $attempt++) {
     $mysqlState = (docker compose ps mysql --format json | Out-String).Trim()
-    if ($mysqlState -match '"Health":"healthy"') {
-        $mysqlReady = $true
-        break
+    if ($mysqlState -notmatch '"Health":"healthy"') {
+        Write-Host "Starting the existing MySQL service without build or pull..."
+        docker compose up -d --no-build --pull never mysql
+        if ($LASTEXITCODE -ne 0) {
+            throw "MySQL failed to start. Confirm that mysql:8.4 and the existing volume are present."
+        }
     }
-    Start-Sleep -Seconds 5
-}
-if (-not $mysqlReady) {
-    throw "MySQL did not become healthy within 120 seconds. Run scripts\demo-status.ps1."
+
+    $mysqlReady = $false
+    for ($attempt = 1; $attempt -le 24; $attempt++) {
+        $mysqlState = (docker compose ps mysql --format json | Out-String).Trim()
+        if ($mysqlState -match '"Health":"healthy"') {
+            $mysqlReady = $true
+            break
+        }
+        Start-Sleep -Seconds 5
+    }
+    if (-not $mysqlReady) {
+        throw "MySQL did not become healthy within 120 seconds. Run scripts\demo-status.ps1."
+    }
+} else {
+    Write-Host "MySQL is already reachable on 127.0.0.1:3306; Docker checks are skipped."
 }
 
 if (-not (Test-Path -LiteralPath $PythonPath)) {

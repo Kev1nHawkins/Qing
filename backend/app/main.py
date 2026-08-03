@@ -1,10 +1,12 @@
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import AsyncIterator
 from uuid import uuid4
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -14,6 +16,7 @@ from app.core.middleware import RequestContextMiddleware
 
 configure_logging()
 logger = structlog.get_logger(__name__)
+UPLOAD_ROOT = Path(__file__).resolve().parents[1] / "uploads"
 
 
 @asynccontextmanager
@@ -45,6 +48,7 @@ app.add_middleware(
 )
 register_exception_handlers(app)
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_ROOT, check_dir=False), name="uploads")
 
 
 @app.get("/health", tags=["System"], summary="服务健康检查")

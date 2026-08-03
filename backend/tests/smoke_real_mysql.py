@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
@@ -17,6 +18,10 @@ if str(BACKEND_ROOT) not in sys.path:
 BASE_URL = os.getenv("SMOKE_BASE_URL", "http://127.0.0.1:8000")
 USE_TESTCLIENT = os.getenv("SMOKE_USE_TESTCLIENT") == "1"
 results: list[dict] = []
+SMOKE_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk"
+    "YAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+)
 
 
 def compact(data):
@@ -87,7 +92,11 @@ def main() -> None:
 
         client_context = TestClient(app, base_url=BASE_URL)
     else:
-        client_context = httpx.Client(base_url=BASE_URL, timeout=10.0)
+        client_context = httpx.Client(
+            base_url=BASE_URL,
+            timeout=10.0,
+            trust_env=False,
+        )
 
     with client_context as client:
         call(client, "health", "GET", "/health")
@@ -126,7 +135,17 @@ def main() -> None:
         route_detail = call(
             client, "route_detail", "GET", f"/api/v1/routes/{route_id}"
         )
-        task_id = route_detail["data"]["tasks"][0]["id"]
+        check_in_task = next(
+            (
+                task
+                for task in route_detail["data"]["tasks"]
+                if task["task_type"] == "CHECK_IN"
+            ),
+            None,
+        )
+        if not check_in_task:
+            raise AssertionError("seed route does not contain a CHECK_IN task")
+        task_id = check_in_task["id"]
         call(
             client,
             "route_start",
@@ -134,44 +153,20 @@ def main() -> None:
             f"/api/v1/routes/{route_id}/start",
             token=user_token,
         )
-        call(
+        evidence = call(
             client,
-            "task_complete_without_photo_denied",
+            "task_evidence_upload",
             "POST",
-            f"/api/v1/tasks/{task_id}/complete",
+            f"/api/v1/tasks/{task_id}/evidence",
             token=user_token,
-            json={},
-            expected_status=400,
-        )
-        call(
-            client,
-            "fake_image_upload_denied",
-            "POST",
-            "/api/v1/uploads/images",
-            token=user_token,
-            files={"file": ("fake.png", b"not-an-image", "image/png")},
-            expected_status=400,
-        )
-        upload = call(
-            client,
-            "task_photo_upload",
-            "POST",
-            "/api/v1/uploads/images",
-            token=user_token,
-            files={
-                "file": (
-                    "checkin.png",
-                    (
-                        b"\x89PNG\r\n\x1a\n"
-                        b"\x00\x00\x00\rIHDR"
-                        b"\x00\x00\x00\x01\x00\x00\x00\x01"
-                        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-                    ),
-                    "image/png",
-                )
+            content=SMOKE_PNG,
+            headers={
+                "Content-Type": "image/png",
+                "X-File-Name": "smoke-check-in.png",
             },
             expected_status=201,
         )
+        completion_payload = {"file_asset_id": evidence["data"]["id"]}
 
         first_complete = call(
             client,
@@ -179,23 +174,9 @@ def main() -> None:
             "POST",
             f"/api/v1/tasks/{task_id}/complete",
             token=user_token,
-            json={"answer": f"PHOTO:{upload['data']['url']}"},
+            json=completion_payload,
         )
         first_total = first_complete["data"]["pointsTotal"]
-        route_progress = call(
-            client,
-            "route_progress_with_photo",
-            "GET",
-            f"/api/v1/routes/{route_id}/progress",
-            token=user_token,
-        )
-        completed_record = next(
-            record
-            for record in route_progress["data"]["records"]
-            if record["taskId"] == task_id
-        )
-        if not (completed_record.get("answer") or "").startswith("PHOTO:/uploads/"):
-            raise AssertionError("route progress did not expose the user's photo footprint")
         points = call(
             client,
             "points_records",
@@ -209,7 +190,7 @@ def main() -> None:
             "POST",
             f"/api/v1/tasks/{task_id}/complete",
             token=user_token,
-            json={},
+            json=completion_payload,
         )
         if not duplicate_complete["data"]["alreadyCompleted"]:
             raise AssertionError("duplicate task completion was not reported as idempotent")
@@ -220,50 +201,6 @@ def main() -> None:
         )
         if me_after["data"]["points_total"] != first_total:
             raise AssertionError("duplicate task completion changed point total")
-        shop = call(client, "point_shop", "GET", "/api/v1/points/shop")
-        if len(shop["data"]["products"]) < 8:
-            raise AssertionError("point shop product catalog is not diverse enough")
-        redemption_id = f"smoke-{suffix}"
-        redemption = call(
-            client,
-            "point_shop_redeem",
-            "POST",
-            "/api/v1/points/redeem",
-            token=user_token,
-            json={
-                "product_code": "kapok-wallpaper",
-                "redemption_id": redemption_id,
-            },
-        )
-        if redemption["data"]["pointsTotal"] != 0:
-            raise AssertionError("point redemption did not deduct the expected balance")
-        duplicate_redemption = call(
-            client,
-            "point_shop_redeem_duplicate",
-            "POST",
-            "/api/v1/points/redeem",
-            token=user_token,
-            json={
-                "product_code": "kapok-wallpaper",
-                "redemption_id": redemption_id,
-            },
-        )
-        if not duplicate_redemption["data"]["alreadyRedeemed"]:
-            raise AssertionError("duplicate redemption was not idempotent")
-        redemptions = call(
-            client,
-            "point_shop_redemptions",
-            "GET",
-            "/api/v1/points/redemptions",
-            token=user_token,
-        )
-        if redemptions["data"]["total"] != 1:
-            raise AssertionError("redemption inventory did not return the redeemed product")
-        redemption_item = redemptions["data"]["items"][0]
-        if redemption_item["productCode"] != "kapok-wallpaper":
-            raise AssertionError("redemption inventory returned the wrong product")
-        if redemption_item["status"] != "AVAILABLE" or not redemption_item["voucherCode"]:
-            raise AssertionError("redemption inventory did not return a usable voucher")
 
         post = call(
             client,

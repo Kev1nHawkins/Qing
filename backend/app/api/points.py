@@ -8,12 +8,13 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.api.helpers import paginated
 from app.core.config import settings
 from app.core.response import success
+from app.models.enums import PointReason
 from app.models.points import PointRecord
 from app.models.user import User
 from app.schemas.points import PointRead, PointRedeemRequest
 
 router = APIRouter(prefix="/points", tags=["Points"])
-REWARD_REDEEM_REASON = "REWARD_REDEEM"
+REWARD_REDEEM_REASON = PointReason.REWARD_REDEEM.value
 
 SHOP_PRODUCTS = [
     {

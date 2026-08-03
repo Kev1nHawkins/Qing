@@ -13,11 +13,6 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('adminAccessToken')
-      if (window.location.pathname !== '/login') window.location.assign('/login')
-    }
-    return Promise.reject(new Error(error.response?.data?.message || '请求失败'))
-  },
+  (error) => Promise.reject(new Error(error.response?.data?.message || '请求失败')),
 )
+
