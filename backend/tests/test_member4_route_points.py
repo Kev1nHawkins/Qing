@@ -6,6 +6,7 @@ import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./member4-test-bootstrap.sqlite3")
@@ -15,9 +16,20 @@ from app.api.points import SHOP_PRODUCTS
 from app.api.task import distance_meters, validate_task_configuration
 from app.core.database import get_db
 from app.main import app
-from app.models import Badge, Base, FileAsset, Location, Role, Route, RouteTask, User
+from app.models import (
+    Badge,
+    Base,
+    FileAsset,
+    Location,
+    Role,
+    Route,
+    RouteTask,
+    User,
+    UserBadge,
+)
 from app.schemas.points import PointRedeemRequest
 from app.schemas.route import TaskCompleteRequest, TaskCreate, TaskRead
+from app.scripts.seed import ensure_badges, sync_existing_user_badges
 from app.services.task_evidence import resolve_asset_path, validate_image
 
 
@@ -83,7 +95,70 @@ def test_member4_schema_and_file_validation(monkeypatch: pytest.MonkeyPatch, tmp
     monkeypatch.setenv("LINGCHAO_UPLOAD_ROOT", str(tmp_path))
     with pytest.raises(HTTPException):
         resolve_asset_path("../outside.png")
+    assert len(SHOP_PRODUCTS) == 18
     assert len({product["code"] for product in SHOP_PRODUCTS}) == len(SHOP_PRODUCTS)
+    assert {product["category"] for product in SHOP_PRODUCTS} == {
+        "DIGITAL",
+        "GUIDE",
+        "CULTURAL",
+        "CAMPUS",
+        "CREATION",
+        "EXPERIENCE",
+    }
+    assert all(product["points"] > 0 for product in SHOP_PRODUCTS)
+
+
+@pytest.mark.asyncio
+async def test_member4_badge_seed_catalog_is_rich_and_idempotent() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    try:
+        async with session_factory() as session:
+            await ensure_badges(session)
+            await session.commit()
+            await ensure_badges(session)
+            await session.commit()
+
+            badges = (await session.scalars(select(Badge).order_by(Badge.id))).all()
+            assert len(badges) == 9
+            assert len({badge.code for badge in badges}) == len(badges)
+            assert {badge.rule_type for badge in badges} == {"TASK_COUNT", "POINT_TOTAL"}
+            assert max(
+                badge.rule_value for badge in badges if badge.rule_type == "TASK_COUNT"
+            ) == 11
+            assert max(
+                badge.rule_value for badge in badges if badge.rule_type == "POINT_TOTAL"
+            ) == 150
+
+            role = Role(code="badge-user", name="徽章测试用户", description=None)
+            session.add(role)
+            await session.flush()
+            user = User(
+                username="existing-badge-user",
+                email=None,
+                password_hash="unused",
+                nickname="既有用户",
+                avatar_url=None,
+                bio=None,
+                is_active=True,
+                points_total=100,
+                role_id=role.id,
+            )
+            session.add(user)
+            await session.flush()
+            await sync_existing_user_badges(session)
+            await session.commit()
+            awarded = (
+                await session.scalars(
+                    select(UserBadge).where(UserBadge.user_id == user.id)
+                )
+            ).all()
+            assert len(awarded) == 3
+    finally:
+        await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -253,6 +328,7 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             radius_meters=100,
         )
         session.add_all([photo_task, qr_task, location_task, draft_task])
+        await ensure_badges(session)
         await session.commit()
         ids = {
             "user": user.id,
@@ -401,7 +477,10 @@ async def test_member4_task_evidence_ownership_and_task_contract(
 
             badges_response = await client.get("/api/v1/badges/mine")
             assert badges_response.status_code == 200
-            assert len(badges_response.json()["data"]) == 2
+            awarded_badge_ids = {
+                item["badge_id"] for item in badges_response.json()["data"]
+            }
+            assert len(awarded_badge_ids) == 3
 
             repeat_response = await client.post(
                 f"/api/v1/tasks/{ids['photo']}/complete",
@@ -412,7 +491,15 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             repeated_point_records = await client.get("/api/v1/points/records")
             assert repeated_point_records.json()["data"]["total"] == 1
             repeated_badges = await client.get("/api/v1/badges/mine")
-            assert len(repeated_badges.json()["data"]) == 2
+            assert {
+                item["badge_id"] for item in repeated_badges.json()["data"]
+            } == awarded_badge_ids
+
+            shop_response = await client.get("/api/v1/points/shop")
+            assert shop_response.status_code == 200
+            assert len(shop_response.json()["data"]["categories"]) == 7
+            assert len(shop_response.json()["data"]["products"]) == 18
+            assert shop_response.json()["requestId"]
 
             redemption_payload = {
                 "product_code": "kapok-wallpaper",
@@ -471,7 +558,11 @@ async def test_member4_task_evidence_ownership_and_task_contract(
             assert near_location_response.status_code == 200
             assert near_location_response.json()["data"]["distanceMeters"] == 0
             final_badges_response = await client.get("/api/v1/badges/mine")
-            assert len(final_badges_response.json()["data"]) == 3
+            final_badge_ids = {
+                item["badge_id"] for item in final_badges_response.json()["data"]
+            }
+            assert awarded_badge_ids < final_badge_ids
+            assert len(final_badge_ids) == 6
 
             evidence_response = await client.get(
                 f"/api/v1/tasks/{ids['photo']}/evidence/{asset_id}"

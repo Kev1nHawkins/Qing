@@ -12,6 +12,7 @@ from app.models.enums import BadgeRuleType, PublishStatus, TaskType
 from app.models.points import Badge
 from app.models.route import Route, RouteTask
 from app.models.user import Role, User
+from app.services.points import evaluate_badges
 
 
 async def ensure_roles(session) -> dict[str, Role]:
@@ -47,9 +48,45 @@ async def ensure_admin(session, role: Role) -> User:
 
 async def ensure_badges(session) -> None:
     badge_specs = [
-        ("kapok-first", "红棉初见", "完成首个红棉寻迹任务", BadgeRuleType.TASK_COUNT, 1),
-        ("culture-walker", "文化行者", "累计完成 3 个寻迹任务", BadgeRuleType.TASK_COUNT, 3),
-        ("tide-creator", "岭潮共创者", "累计获得 50 积分", BadgeRuleType.POINT_TOTAL, 50),
+        ("kapok-first", "红棉初见", "迈出校园寻迹第一步，让第一枚红棉印记成为你的文化旅程起点", BadgeRuleType.TASK_COUNT, 1),
+        ("culture-walker", "文化行者", "走过 3 处文化地标，把课堂之外的岭南故事收入自己的校园记忆", BadgeRuleType.TASK_COUNT, 3),
+        (
+            "five-token-keeper",
+            "五印集章家",
+            "集齐红棉路线 5 枚文化印记，解锁一套属于你的校园寻迹收藏",
+            BadgeRuleType.TASK_COUNT,
+            5,
+        ),
+        (
+            "campus-pathfinder",
+            "校园寻踪者",
+            "完成 8 次文化探索，从跟随路线进阶为能发现校园故事的寻踪者",
+            BadgeRuleType.TASK_COUNT,
+            8,
+        ),
+        (
+            "route-master",
+            "岭潮路线大师",
+            "完成全部 11 个校园寻迹任务，以完整足迹加冕岭潮路线大师",
+            BadgeRuleType.TASK_COUNT,
+            11,
+        ),
+        ("culture-sprout", "拾光新芽", "积攒 25 分文化能量，点亮第一份可兑换、可收藏的探索成果", BadgeRuleType.POINT_TOTAL, 25),
+        ("tide-creator", "岭潮共创者", "持有 50 分文化积分，让每次寻迹都转化为下一次共创的灵感", BadgeRuleType.POINT_TOTAL, 50),
+        (
+            "heritage-guardian",
+            "文化守护人",
+            "持有 100 分文化积分，用持续参与守护并分享值得被看见的岭南故事",
+            BadgeRuleType.POINT_TOTAL,
+            100,
+        ),
+        (
+            "kapok-ambassador",
+            "红棉传播使",
+            "持有 150 分文化积分，成为连接校园探索、文化共创与青年传播的红棉使者",
+            BadgeRuleType.POINT_TOTAL,
+            150,
+        ),
     ]
     for code, name, description, rule_type, rule_value in badge_specs:
         badge = await session.scalar(select(Badge).where(Badge.code == code))
@@ -69,6 +106,12 @@ async def ensure_badges(session) -> None:
             badge.rule_type = rule_type.value
             badge.rule_value = rule_value
             badge.is_active = True
+
+
+async def sync_existing_user_badges(session) -> None:
+    users = (await session.scalars(select(User).where(User.is_active.is_(True)))).all()
+    for user in users:
+        await evaluate_badges(session, user)
 
 
 async def ensure_demo_routes(session, admin: User) -> None:
@@ -277,6 +320,7 @@ async def main() -> None:
         admin = await ensure_admin(session, roles["admin"])
         await ensure_badges(session)
         await ensure_demo_routes(session, admin)
+        await sync_existing_user_badges(session)
         await session.commit()
     print("Seed data is ready.")
 
