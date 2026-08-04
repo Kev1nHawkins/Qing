@@ -130,6 +130,7 @@ async def ensure_ai_creation(
     if creation:
         creation.output_url = spec.get("cover_image_url")
         creation.description = spec["content"]
+        creation.culture_item_id = culture.id
         return creation
     creation = AICreation(
         user_id=author.id,
@@ -237,22 +238,57 @@ async def main() -> None:
     if len(specs) < 20:
         raise RuntimeError("社区演示内容不得少于 20 条")
 
+    culture_slugs = set()
+    for spec in specs:
+        kind = spec.get("kind")
+        culture_slug = spec.get("culture_slug")
+        if kind not in {"AI", "CAMPUS", "CULTURE"}:
+            raise RuntimeError(f"社区演示内容类型无效：{kind}")
+        if kind == "CAMPUS":
+            if culture_slug is not None:
+                raise RuntimeError(
+                    f"校园打卡不得关联文化条目：{spec.get('title')}"
+                )
+            continue
+        if not isinstance(culture_slug, str) or not culture_slug:
+            raise RuntimeError(
+                f"{kind} 演示内容缺少 culture_slug：{spec.get('title')}"
+            )
+        culture_slugs.add(culture_slug)
+
     async with AsyncSessionLocal() as session:
         users = await ensure_demo_users(session, password)
-        culture = await session.scalar(
-            select(CultureItem).where(CultureItem.slug == "kapok-hero-flower")
-        )
+        cultures = {
+            culture.slug: culture
+            for culture in (
+                await session.scalars(
+                    select(CultureItem).where(CultureItem.slug.in_(culture_slugs))
+                )
+            ).all()
+        }
+        missing_culture_slugs = culture_slugs - cultures.keys()
+        if missing_culture_slugs:
+            missing = ", ".join(sorted(missing_culture_slugs))
+            raise RuntimeError(
+                f"社区演示内容关联的文化条目不存在：{missing}；"
+                "请先运行 python -m app.scripts.seed"
+            )
         template = await session.scalar(
             select(CreationTemplate).where(
                 CreationTemplate.code == "kapok-poster"
             )
         )
-        if not culture or not template:
-            raise RuntimeError("请先运行 python -m app.scripts.seed 初始化文化与模板")
+        if not template:
+            raise RuntimeError("请先运行 python -m app.scripts.seed 初始化创作模板")
 
         posts = []
         for index, spec in enumerate(specs):
             author = users[index % len(users)]
+            culture = (
+                cultures[spec["culture_slug"]]
+                if spec["culture_slug"] is not None
+                else None
+            )
             post = await session.scalar(
                 select(Post).where(
                     Post.author_id == author.id,
@@ -263,6 +299,7 @@ async def main() -> None:
                 creation = None
                 culture_id = None
                 if spec["kind"] == "AI":
+                    assert culture is not None
                     creation = await ensure_ai_creation(
                         session,
                         author=author,
@@ -272,6 +309,7 @@ async def main() -> None:
                     )
                     culture_id = culture.id
                 elif spec["kind"] == "CULTURE":
+                    assert culture is not None
                     culture_id = culture.id
 
                 post = Post(
@@ -290,6 +328,7 @@ async def main() -> None:
                 post.cover_image_url = spec.get("cover_image_url")
                 post.status = spec["status"]
                 if spec["kind"] == "AI":
+                    assert culture is not None
                     creation = await ensure_ai_creation(
                         session,
                         author=author,
@@ -300,6 +339,7 @@ async def main() -> None:
                     post.creation_id = creation.id
                     post.culture_item_id = culture.id
                 elif spec["kind"] == "CULTURE":
+                    assert culture is not None
                     post.creation_id = None
                     post.culture_item_id = culture.id
                 else:

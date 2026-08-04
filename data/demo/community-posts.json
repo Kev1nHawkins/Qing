@@ -3,6 +3,7 @@
     "title": "把木棉的红，写成一封校园来信",
     "content": "我把木棉花瓣的轮廓拆成三层：城市记忆、校园日常和青年表达。生成海报时保留了枝干向上的力量感，也让图书馆的几何线条成为背景。它不是对传统符号的简单拼贴，而是一次关于“我们怎样继续讲述”的练习。",
     "kind": "AI",
+    "culture_slug": "kapok-hero-flower",
     "status": "PUBLISHED",
     "tags": ["木棉", "AI共创", "校园文化"],
     "cover_image_url": "/demo/kapok.jpg"
@@ -11,6 +12,7 @@
     "title": "傍晚六点，我在校门口看见了两种归来",
     "content": "一边是结束课程的人流，一边是晚霞落在校门上的暖光。校园地标之所以有记忆，不只是因为建筑本身，也因为我们一次次从这里出发、再回到这里。今天的打卡关键词是：归属感。",
     "kind": "CAMPUS",
+    "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "广州大学", "青年记忆"],
     "cover_image_url": "/demo/dexin-pavilion.jpg"
@@ -19,6 +21,7 @@
     "title": "红棉寻迹第一站：先学会观察一棵树",
     "content": "路线开始前，我只把木棉当作一种醒目的红色。走完第一站才发现，花期、枝形和城市道路共同构成了它的现场语境。我们记录的不只是一个文化符号，也是在记录人与城市相遇的方法。",
     "kind": "CULTURE",
+    "culture_slug": "kapok-hero-flower",
     "status": "PUBLISHED",
     "tags": ["文化寻迹", "木棉", "城市观察"],
     "cover_image_url": "/demo/kapok.jpg"
@@ -27,6 +30,7 @@
     "title": "从水袖的弧线出发，做一张会呼吸的海报",
     "content": "这次 AI 创作没有直接复刻戏服，而是提取水袖运动的节奏、舞台留白和红蓝对比。提示词中特别加入“尊重粤剧表演语境”和“避免脸谱元素混用”，希望生成结果既有新鲜感，也保留文化边界。",
     "kind": "AI",
+    "culture_slug": "cantonese-opera-culture",
     "status": "PUBLISHED",
     "tags": ["粤剧", "AI共创", "视觉设计"],
     "cover_image_url": "/demo/cantonese-opera-ai.png"
@@ -35,6 +39,7 @@
     "title": "图书馆开门前的十分钟",
     "content": "清晨的主路还很安静，玻璃幕墙先接住了第一层天光。有人背单词，有人绕湖慢跑，也有人坐在台阶上修改昨晚的作品。校园文化常常就藏在这些没有被安排的十分钟里。",
     "kind": "CAMPUS",
+    "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "图书馆", "日常观察"],
     "cover_image_url": "/demo/dexin-pavilion.jpg"
@@ -43,6 +48,7 @@
     "title": "为什么木棉总让人想到“向上”",
     "content": "木棉先花后叶，盛放时枝干轮廓尤其清晰。我们在讨论中没有把这种自然特征直接等同于某种唯一象征，而是把它当成理解城市记忆的入口：同一种花，可以承载历史叙事，也可以成为今天的校园视觉语言。",
     "kind": "CULTURE",
+    "culture_slug": "kapok-hero-flower",
     "status": "PUBLISHED",
     "tags": ["木棉", "文化观察", "岭南文化"],
     "cover_image_url": "/demo/kapok.jpg"
@@ -51,6 +57,7 @@
     "title": "把广彩的层次感转译成校园导视",
     "content": "我尝试让 AI 学习“层层展开”的构图逻辑，而不是直接复制具体纹样。生成稿用克制的金、青与木棉红区分路线层级，再把文化来源写进说明区。下一步准备邀请同学测试它在手机屏幕上的可读性。",
     "kind": "AI",
+    "culture_slug": "lingnan-culture-overview",
     "status": "PUBLISHED",
     "tags": ["广彩", "信息设计", "AI共创"],
     "cover_image_url": "/demo/dexin-pavilion.jpg"
@@ -59,6 +66,7 @@
     "title": "德馨亭边，风把讨论课延长了半小时",
     "content": "我们原本只打算拍一张路线记录，最后却围着“校园里的公共空间怎样形成共同记忆”聊了很久。亭子、树荫和可以停留的台阶，让知识从教室继续流向校园。",
     "kind": "CAMPUS",
+    "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "公共空间", "广州大学"],
     "cover_image_url": "/demo/dexin-pavilion.jpg"
@@ -67,6 +75,7 @@
     "title": "醒狮不是一个贴纸：角色设计前的三条笔记",
     "content": "第一，先理解狮头结构和表演场景；第二，不把不同地域的造型特征随意混合；第三，让生成模型服务于叙事，而不是替代资料核验。这版角色只展示概念方向，正式发布前还会请文化内容同学复核。",
     "kind": "AI",
+    "culture_slug": "lingnan-culture-overview",
     "status": "PUBLISHED",
     "tags": ["醒狮文化", "角色设计", "资料核验"],
     "cover_image_url": null
@@ -75,6 +84,7 @@
     "title": "用粤语地名做一次校园声音采集",
     "content": "我们记录了同学如何读出熟悉的广州地名，也记录他们第一次听见某些读音时的反应。声音不是猎奇素材，它与生活经验、迁徙和代际记忆有关。所有录音都会先取得参与者同意，再决定是否公开。",
     "kind": "CULTURE",
+    "culture_slug": "lingnan-culture-overview",
     "status": "PUBLISHED",
     "tags": ["粤语", "声音档案", "文化伦理"],
     "cover_image_url": null
@@ -83,6 +93,7 @@
     "title": "雨后的大学城，路面像一张缓慢显影的照片",
     "content": "雨停后从教学区走回生活区，树影、车灯和鞋底的水声一起改变了熟悉的路线。今天没有完成复杂任务，只留下三张照片和一句话：校园记忆也需要天气。",
     "kind": "CAMPUS",
+    "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "雨天", "影像记录"],
     "cover_image_url": "/demo/dexin-pavilion.jpg"
@@ -91,6 +102,7 @@
     "title": "剪纸风不等于“加一层红色滤镜”",
     "content": "这次生成测试把重点放在正负形、折叠逻辑和边缘节奏上。我们保留手工剪刻会出现的轻微不均匀感，同时避免把所有岭南主题都处理成同一种视觉模板。文化创新的第一步，也许是拒绝方便的刻板印象。",
     "kind": "AI",
+    "culture_slug": "lingnan-culture-overview",
     "status": "PUBLISHED",
     "tags": ["剪纸", "AI共创", "设计方法"],
     "cover_image_url": null
@@ -99,6 +111,7 @@
     "title": "骑楼的阴影，是一种为行人留下的位置",
     "content": "观察骑楼时，我们把注意力从“建筑很有特色”转向人在其中怎样行走、停留与交谈。连续的遮蔽空间回应了岭南气候，也连接了街道生活。这样的观察可以帮助校园公共空间设计更关注真实使用者。",
     "kind": "CULTURE",
+    "culture_slug": "lingnan-arcades",
     "status": "PUBLISHED",
     "tags": ["骑楼", "岭南建筑", "城市观察"],
     "cover_image_url": null
@@ -107,6 +120,7 @@
     "title": "食堂窗口前的口味地图",
     "content": "我们请同学用一个词描述最有校园记忆的味道，答案从清淡、鲜甜到“阿姨多给的一勺汁”。这不是美食排行榜，而是一张由日常选择组成的微型迁徙地图。",
     "kind": "CAMPUS",
+    "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园生活", "饮食记忆", "口述记录"],
     "cover_image_url": null
@@ -115,6 +129,7 @@
     "title": "如果未来校园海报仍然保留手写温度",
     "content": "我让 AI 先生成结构，再由同学补上标题笔触和真实活动信息。机器适合快速探索构图，人更擅长判断哪一句话值得留下。最终稿把木棉红压到很小的面积，只在视线最需要停留的位置出现。",
     "kind": "AI",
+    "culture_slug": "guangzhou-university-three-campuses",
     "status": "PUBLISHED",
     "tags": ["未来校园", "海报设计", "人机共创"],
     "cover_image_url": "/demo/dexin-pavilion.jpg"
@@ -123,6 +138,7 @@
     "title": "木棉角色设定：从花萼到动作语言",
     "content": "待审核版本。角色的站姿来自木棉枝干向上伸展的结构，配色只使用花瓣红、树皮灰与少量校园绿。提交审核时附上了形态参考和生成过程，避免把来源不明的网络图直接混入训练参考。",
     "kind": "AI",
+    "culture_slug": "kapok-hero-flower",
     "status": "PENDING",
     "tags": ["木棉", "角色设定", "待审核"],
     "cover_image_url": "/demo/kapok.jpg"
@@ -131,6 +147,7 @@
     "title": "粤剧水袖交互海报：动作草案",
     "content": "待审核版本。海报会根据手机倾斜角度改变水袖轨迹，但不会截取或替换演员肖像。当前主要检查动作语汇是否得当、图片许可是否完整，以及交互是否会造成文化信息误读。",
     "kind": "AI",
+    "culture_slug": "cantonese-opera-culture",
     "status": "PENDING",
     "tags": ["粤剧", "交互设计", "待审核"],
     "cover_image_url": "/demo/cantonese-opera-ai.png"
@@ -139,6 +156,7 @@
     "title": "旧照片颜色修复测试：来源仍待确认",
     "content": "驳回演示内容。图片拍摄者、年代与授权链条尚未核验，虽然生成效果完整，但不适合公开传播。请补充原始出处、许可说明和修改范围后重新提交。",
     "kind": "AI",
+    "culture_slug": "lingnan-culture-overview",
     "status": "REJECTED",
     "tags": ["授权核验", "审核演示", "旧照片"],
     "cover_image_url": null
@@ -147,6 +165,7 @@
     "title": "春日红棉共创周活动回顾",
     "content": "下架演示内容。活动已结束，页面暂时下架，但保留在管理后台用于展示历史内容的状态管理。现场作品后续将按作者授权范围重新整理为专题。",
     "kind": "CULTURE",
+    "culture_slug": "kapok-hero-flower",
     "status": "OFFLINE",
     "tags": ["官方活动", "木棉", "活动回顾"],
     "cover_image_url": "/demo/kapok.jpg"
@@ -155,6 +174,7 @@
     "title": "路线维护临时公告：红棉广场节点",
     "content": "下架演示内容。该临时公告已完成使命并从社区信息流移除。后台仍可查看它，用于演示管理员下架后公众不可见、记录仍可管理的基础流程。",
     "kind": "CAMPUS",
+    "culture_slug": null,
     "status": "OFFLINE",
     "tags": ["路线公告", "校园服务", "审核演示"],
     "cover_image_url": null
