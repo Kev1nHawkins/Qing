@@ -26,7 +26,11 @@ class TimeoutLLM(LLMAdapter):
 
 
 class SuccessLLM(LLMAdapter):
+    def __init__(self) -> None:
+        self.call_count = 0
+
     async def generate(self, prompt: str) -> str:
+        self.call_count += 1
         return "基于本地知识来源生成的模型回答。"
 
 
@@ -45,6 +49,13 @@ class VectorRetriever:
                 "score": 0.9,
             }
         ]
+
+
+class EmptyRetriever:
+    last_mode = "keyword"
+
+    def retrieve(self, query: str, top_k: int = 5):
+        return []
 
 
 def build_service(*, deepseek: bool = False) -> RAGService:
@@ -86,37 +97,48 @@ async def test_deepseek_timeout_uses_grounded_preset() -> None:
 async def test_unknown_question_is_not_fabricated() -> None:
     result = await build_service().answer("量子计算机如何维修主板？")
     assert result.answerable is False
-    assert result.answer == RAGService.FALLBACK_ANSWER
+    assert result.answer == RAGService.OUT_OF_SCOPE_ANSWER
     assert result.sources == []
 
 
 @pytest.mark.asyncio
-async def test_unknown_question_uses_general_deepseek_when_configured() -> None:
-    keyword = KeywordKnowledgeRetriever(KNOWLEDGE)
-    retriever = ResilientKnowledgeRetriever(None, keyword)
+async def test_unknown_question_does_not_use_general_deepseek_when_configured() -> None:
     fallback = LLMService(MockLLM(), PROMPT)
+    external_adapter = SuccessLLM()
     result = await RAGService(
-        retriever=retriever,
-        llm_service=LLMService(SuccessLLM(), PROMPT),
+        retriever=EmptyRetriever(),
+        llm_service=LLMService(external_adapter, PROMPT),
         fallback_llm_service=fallback,
         external_provider="deepseek",
         external_model="configured-model",
     ).answer("请介绍太阳系的八大行星。")
-    assert result.answerable is True
-    assert result.answer
+    assert result.answerable is False
+    assert result.answer == RAGService.OUT_OF_SCOPE_ANSWER
     assert result.sources == []
-    assert result.mode == "GENERAL_DEEPSEEK"
-    assert result.provider == "deepseek"
-    assert result.fallback_used is False
+    assert result.mode == "PRESET_FALLBACK"
+    assert result.provider == "preset"
+    assert result.fallback_used is True
+    assert external_adapter.call_count == 0
 
 
 @pytest.mark.asyncio
-async def test_unknown_question_keeps_safe_fallback_when_general_deepseek_times_out() -> None:
-    result = await build_service(deepseek=True).answer("请介绍太阳系的八大行星。")
+async def test_cultural_question_without_source_uses_knowledge_fallback() -> None:
+    fallback = LLMService(MockLLM(), PROMPT)
+    external_adapter = SuccessLLM()
+    result = await RAGService(
+        retriever=EmptyRetriever(),
+        llm_service=LLMService(external_adapter, PROMPT),
+        fallback_llm_service=fallback,
+        external_provider="deepseek",
+        external_model="configured-model",
+    ).answer("醒狮在广州大学有哪些固定校园活动？")
     assert result.answerable is False
     assert result.answer == RAGService.FALLBACK_ANSWER
+    assert result.sources == []
     assert result.mode == "PRESET_FALLBACK"
+    assert result.provider == "preset"
     assert result.fallback_used is True
+    assert external_adapter.call_count == 0
 
 
 @pytest.mark.asyncio

@@ -190,7 +190,12 @@ def test_boundary_question_is_refused_without_source_or_suggestion(
 
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["answer"] == RAGService.FALLBACK_ANSWER
+    expected_answer = (
+        RAGService.FALLBACK_ANSWER
+        if "医疗功效" in str(case["category"])
+        else RAGService.OUT_OF_SCOPE_ANSWER
+    )
+    assert data["answer"] == expected_answer
     assert data["sources"] == []
     assert data["creation_suggestion"] == {
         "enable": False,
