@@ -18,13 +18,12 @@ from app.scripts import seed_community_demo
 from app.scripts.seed import CULTURE_SPECS, ensure_demo_routes
 
 
-COMMUNITY_DEMO_DATA = (
-    Path(__file__).resolve().parents[2] / "data" / "demo" / "community-posts.json"
-)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+COMMUNITY_DEMO_DATA = REPO_ROOT / "data" / "demo" / "community-posts.json"
 
 
 def test_culture_demo_specs_are_complete_and_unique() -> None:
-    assert len(CULTURE_SPECS) == 12
+    assert len(CULTURE_SPECS) == 30
 
     slugs = [spec["slug"] for spec in CULTURE_SPECS]
     assert len(slugs) == len(set(slugs))
@@ -45,29 +44,38 @@ def test_culture_demo_specs_are_complete_and_unique() -> None:
         assert set(spec) == required_fields
         assert spec["title"].strip()
         assert spec["category"].strip()
-        assert 60 <= len(spec["summary"].strip()) <= 120
-        assert spec["content"].strip()
+        assert 50 <= len(spec["summary"].strip()) <= 120
+        assert len(spec["content"].strip()) >= 400
+        assert len(spec["content"].split("\n\n")) == 5
+        assert spec["cover_image_url"].startswith("/demo/culture-covers/")
         assert spec["source_title"].strip()
         assert spec["source_url"].startswith("https://")
         assert spec["status"] == "PUBLISHED"
+        for frontend in ("frontend-user", "frontend-admin"):
+            cover_path = (
+                REPO_ROOT / frontend / "public" / spec["cover_image_url"].lstrip("/")
+            )
+            assert cover_path.is_file()
 
 
 def test_community_demo_preserves_existing_kind_semantics() -> None:
     specs = json.loads(COMMUNITY_DEMO_DATA.read_text(encoding="utf-8"))
     culture_slugs = {spec["slug"] for spec in CULTURE_SPECS}
+    culture_covers = {spec["cover_image_url"] for spec in CULTURE_SPECS}
 
-    assert len(specs) == 20
+    assert len(specs) == 40
     assert Counter(spec["status"] for spec in specs) == {
-        "PUBLISHED": 15,
-        "PENDING": 2,
-        "REJECTED": 1,
-        "OFFLINE": 2,
+        "PUBLISHED": 30,
+        "PENDING": 4,
+        "REJECTED": 2,
+        "OFFLINE": 4,
     }
     assert Counter(
         spec["kind"] for spec in specs if spec["status"] == "PUBLISHED"
-    ) == {"AI": 6, "CAMPUS": 5, "CULTURE": 4}
+    ) == {"AI": 12, "CAMPUS": 10, "CULTURE": 8}
 
     for spec in specs:
+        assert spec["cover_image_url"] in culture_covers
         if spec["kind"] == "CAMPUS":
             assert spec["culture_slug"] is None
         else:
@@ -130,12 +138,12 @@ def test_demo_seed_scripts_are_idempotent(
         second_snapshot = await snapshot()
 
         assert first_snapshot == second_snapshot
-        assert first_snapshot[:3] == (12, 20, 9)
+        assert first_snapshot[:3] == (30, 40, 18)
 
         async with session_factory() as session:
             cultures = (await session.scalars(select(CultureItem))).all()
             culture_ids_by_slug = {item.slug: item.id for item in cultures}
-            assert len(culture_ids_by_slug) == 12
+            assert len(culture_ids_by_slug) == 30
             kapok_id = culture_ids_by_slug["kapok-hero-flower"]
 
             route_culture_ids = set(
@@ -180,7 +188,7 @@ def test_demo_seed_scripts_are_idempotent(
                 if post.status == "PUBLISHED":
                     public_kinds[spec["kind"]] += 1
 
-            assert public_kinds == {"AI": 6, "CAMPUS": 5, "CULTURE": 4}
+            assert public_kinds == {"AI": 12, "CAMPUS": 10, "CULTURE": 8}
 
         await engine.dispose()
 

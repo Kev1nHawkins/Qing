@@ -6,7 +6,7 @@
     "culture_slug": "kapok-hero-flower",
     "status": "PUBLISHED",
     "tags": ["木棉", "AI共创", "校园文化"],
-    "cover_image_url": "/demo/kapok.jpg"
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
   },
   {
     "title": "傍晚六点，我在校门口看见了两种归来",
@@ -15,7 +15,7 @@
     "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "广州大学", "青年记忆"],
-    "cover_image_url": "/demo/dexin-pavilion.jpg"
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "红棉寻迹第一站：先学会观察一棵树",
@@ -24,7 +24,7 @@
     "culture_slug": "kapok-hero-flower",
     "status": "PUBLISHED",
     "tags": ["文化寻迹", "木棉", "城市观察"],
-    "cover_image_url": "/demo/kapok.jpg"
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
   },
   {
     "title": "从水袖的弧线出发，做一张会呼吸的海报",
@@ -33,7 +33,7 @@
     "culture_slug": "cantonese-opera-culture",
     "status": "PUBLISHED",
     "tags": ["粤剧", "AI共创", "视觉设计"],
-    "cover_image_url": "/demo/cantonese-opera-ai.png"
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
   },
   {
     "title": "图书馆开门前的十分钟",
@@ -42,7 +42,7 @@
     "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "图书馆", "日常观察"],
-    "cover_image_url": "/demo/dexin-pavilion.jpg"
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "为什么木棉总让人想到“向上”",
@@ -51,16 +51,16 @@
     "culture_slug": "kapok-hero-flower",
     "status": "PUBLISHED",
     "tags": ["木棉", "文化观察", "岭南文化"],
-    "cover_image_url": "/demo/kapok.jpg"
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
   },
   {
     "title": "把广彩的层次感转译成校园导视",
     "content": "我尝试让 AI 学习“层层展开”的构图逻辑，而不是直接复制具体纹样。生成稿用克制的金、青与木棉红区分路线层级，再把文化来源写进说明区。下一步准备邀请同学测试它在手机屏幕上的可读性。",
     "kind": "AI",
-    "culture_slug": "lingnan-culture-overview",
+    "culture_slug": "guangcai-porcelain",
     "status": "PUBLISHED",
     "tags": ["广彩", "信息设计", "AI共创"],
-    "cover_image_url": "/demo/dexin-pavilion.jpg"
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
   },
   {
     "title": "德馨亭边，风把讨论课延长了半小时",
@@ -69,25 +69,25 @@
     "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "公共空间", "广州大学"],
-    "cover_image_url": "/demo/dexin-pavilion.jpg"
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "醒狮不是一个贴纸：角色设计前的三条笔记",
     "content": "第一，先理解狮头结构和表演场景；第二，不把不同地域的造型特征随意混合；第三，让生成模型服务于叙事，而不是替代资料核验。这版角色只展示概念方向，正式发布前还会请文化内容同学复核。",
     "kind": "AI",
-    "culture_slug": "lingnan-culture-overview",
+    "culture_slug": "guangdong-lion-dance",
     "status": "PUBLISHED",
     "tags": ["醒狮文化", "角色设计", "资料核验"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
   },
   {
     "title": "用粤语地名做一次校园声音采集",
     "content": "我们记录了同学如何读出熟悉的广州地名，也记录他们第一次听见某些读音时的反应。声音不是猎奇素材，它与生活经验、迁徙和代际记忆有关。所有录音都会先取得参与者同意，再决定是否公开。",
     "kind": "CULTURE",
-    "culture_slug": "lingnan-culture-overview",
+    "culture_slug": "cantonese-language-guangfu",
     "status": "PUBLISHED",
     "tags": ["粤语", "声音档案", "文化伦理"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/lingnan-overview.jpg"
   },
   {
     "title": "雨后的大学城，路面像一张缓慢显影的照片",
@@ -96,7 +96,7 @@
     "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园打卡", "雨天", "影像记录"],
-    "cover_image_url": "/demo/dexin-pavilion.jpg"
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "剪纸风不等于“加一层红色滤镜”",
@@ -105,7 +105,7 @@
     "culture_slug": "lingnan-culture-overview",
     "status": "PUBLISHED",
     "tags": ["剪纸", "AI共创", "设计方法"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
   },
   {
     "title": "骑楼的阴影，是一种为行人留下的位置",
@@ -114,7 +114,7 @@
     "culture_slug": "lingnan-arcades",
     "status": "PUBLISHED",
     "tags": ["骑楼", "岭南建筑", "城市观察"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/architecture-gardens.jpg"
   },
   {
     "title": "食堂窗口前的口味地图",
@@ -123,7 +123,7 @@
     "culture_slug": null,
     "status": "PUBLISHED",
     "tags": ["校园生活", "饮食记忆", "口述记录"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "如果未来校园海报仍然保留手写温度",
@@ -132,7 +132,7 @@
     "culture_slug": "guangzhou-university-three-campuses",
     "status": "PUBLISHED",
     "tags": ["未来校园", "海报设计", "人机共创"],
-    "cover_image_url": "/demo/dexin-pavilion.jpg"
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "木棉角色设定：从花萼到动作语言",
@@ -141,7 +141,7 @@
     "culture_slug": "kapok-hero-flower",
     "status": "PENDING",
     "tags": ["木棉", "角色设定", "待审核"],
-    "cover_image_url": "/demo/kapok.jpg"
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
   },
   {
     "title": "粤剧水袖交互海报：动作草案",
@@ -150,16 +150,16 @@
     "culture_slug": "cantonese-opera-culture",
     "status": "PENDING",
     "tags": ["粤剧", "交互设计", "待审核"],
-    "cover_image_url": "/demo/cantonese-opera-ai.png"
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
   },
   {
     "title": "旧照片颜色修复测试：来源仍待确认",
     "content": "驳回演示内容。图片拍摄者、年代与授权链条尚未核验，虽然生成效果完整，但不适合公开传播。请补充原始出处、许可说明和修改范围后重新提交。",
     "kind": "AI",
-    "culture_slug": "lingnan-culture-overview",
+    "culture_slug": "guangzhou-university-history",
     "status": "REJECTED",
     "tags": ["授权核验", "审核演示", "旧照片"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   },
   {
     "title": "春日红棉共创周活动回顾",
@@ -168,7 +168,7 @@
     "culture_slug": "kapok-hero-flower",
     "status": "OFFLINE",
     "tags": ["官方活动", "木棉", "活动回顾"],
-    "cover_image_url": "/demo/kapok.jpg"
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
   },
   {
     "title": "路线维护临时公告：红棉广场节点",
@@ -177,6 +177,186 @@
     "culture_slug": null,
     "status": "OFFLINE",
     "tags": ["路线公告", "校园服务", "审核演示"],
-    "cover_image_url": null
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "把珠江水脉做成一条可阅读的时间线",
+    "content": "我没有从广州塔夜景开始，而是先整理渡口、桥梁、码头和滨水公共空间的年代。AI只帮助尝试水纹与时间轴的组合，所有地点和年份仍由我们逐条核对；最终画面也会注明它是解释性插画，不是历史地图。",
+    "kind": "AI",
+    "culture_slug": "pearl-river-city-memory",
+    "status": "PUBLISHED",
+    "tags": ["珠江", "城市记忆", "AI共创"],
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
+  },
+  {
+    "title": "海丝地图没有一条笔直航线",
+    "content": "第一版把海上丝绸之路画成从广州直达远方的单线，复核资料后才发现这种表达过于简单。新版加入港口、季风、转运和不同年代图层，让观众看见航路变化，也看见船员、翻译和工匠而不只是一艘帆船。",
+    "kind": "AI",
+    "culture_slug": "guangzhou-maritime-silk-road",
+    "status": "PUBLISHED",
+    "tags": ["海上丝绸之路", "信息设计", "资料核验"],
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
+  },
+  {
+    "title": "听见高胡之后，再开始画声音",
+    "content": "我们先完整听完一段广东音乐，再记录高胡与扬琴怎样交替，而不是让模型凭乐器外形想象“岭南旋律”。海报中的曲线来自节奏观察，音频只链接授权版本；图像说明也保留曲目、演奏者和版本信息。",
+    "kind": "AI",
+    "culture_slug": "guangdong-music",
+    "status": "PUBLISHED",
+    "tags": ["广东音乐", "声音可视化", "AI共创"],
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
+  },
+  {
+    "title": "玉雕的留白，从不能反悔的一刀开始",
+    "content": "这张概念图没有复制具体玉雕作品，而是用层层负空间表达减材工艺。提示词中特别写明“因材施艺”和“不可逆”，生成后再请同学检查工具与结构是否合理；它只用于解释设计思路，不冒充真实玉石或传承人成品。",
+    "kind": "AI",
+    "culture_slug": "guangzhou-jade-carving",
+    "status": "PUBLISHED",
+    "tags": ["广州玉雕", "工艺思维", "AI共创"],
+    "cover_image_url": "/demo/culture-covers/intangible-arts.jpg"
+  },
+  {
+    "title": "把园林微气候变成校园休息指南",
+    "content": "我们记录了水边、树荫和连廊在午后两点的温度与停留人数，再让AI尝试整理成一张低饱和信息图。最后保留的不是仿古屋檐，而是遮阴、通风和慢行这些可验证的空间关系，让传统智慧回到真实使用。",
+    "kind": "AI",
+    "culture_slug": "lingnan-gardens",
+    "status": "PUBLISHED",
+    "tags": ["岭南园林", "校园空间", "信息设计"],
+    "cover_image_url": "/demo/culture-covers/architecture-gardens.jpg"
+  },
+  {
+    "title": "月饼模上的团圆，如何进入数字纹样",
+    "content": "我们从公开展览资料里的月饼模结构出发，只提取中心、边饰和压印层级，没有临摹品牌包装。AI生成稿作为构图草案，最终说明会标注参考来源、插画属性和食品图像并非实际制作成果，避免把漂亮效果当成工艺证明。",
+    "kind": "AI",
+    "culture_slug": "cantonese-mooncake-craft",
+    "status": "PUBLISHED",
+    "tags": ["广式月饼", "纹样设计", "AI共创"],
+    "cover_image_url": "/demo/culture-covers/food-culture.jpg"
+  },
+  {
+    "title": "湖边第一束光，比闹钟早了五分钟",
+    "content": "清晨绕湖时，保洁人员已经完成第一轮工作，跑步的人和赶早课的同学从不同方向经过。今天的打卡没有滤镜，只记录水面、脚步声和长椅上的露水；校园之所以值得记住，也因为这些日常劳动。",
+    "kind": "CAMPUS",
+    "culture_slug": null,
+    "status": "PUBLISHED",
+    "tags": ["校园打卡", "清晨", "日常劳动"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "实验室最后一盏灯熄灭以后",
+    "content": "夜里经过教学区时，我们没有拍摄室内人员和设备，只在公共道路记录窗光逐渐减少的过程。照片背后是课程、实验和安全值守共同组成的校园节奏；发布前也删去了可能暴露具体实验位置的信息。",
+    "kind": "CAMPUS",
+    "culture_slug": null,
+    "status": "PUBLISHED",
+    "tags": ["校园打卡", "夜间校园", "隐私边界"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "同一片树荫，午后坐下了二十七个人",
+    "content": "我们在不拍正脸的前提下记录连廊旁树荫的使用：等人、吃饭、背书、避雨，各自只停留几分钟。打卡结果不是“最美机位”，而是一张关于遮阴、座椅和真实需求的小观察表。",
+    "kind": "CAMPUS",
+    "culture_slug": null,
+    "status": "PUBLISHED",
+    "tags": ["校园打卡", "公共空间", "使用观察"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "社团排练室门外，听见合作发生",
+    "content": "门里是同一小节反复练习，门外是道具清点和时间协调。我们征得同意后只记录环境声，没有上传完整曲目；比起一张整齐合影，这些暂停、重来和互相提醒更像真实的校园共创。",
+    "kind": "CAMPUS",
+    "culture_slug": null,
+    "status": "PUBLISHED",
+    "tags": ["校园打卡", "社团生活", "声音记录"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "三校区同屏的那一刻，距离变成了背景",
+    "content": "大学城、桂花岗和黄埔的同学用同一个模板分享今天的天气、通勤和一处常走的路。我们没有给校区排“最美”名次，而是把差异放在同一张记录里；校园共同体也可以从认真听见彼此开始。",
+    "kind": "CAMPUS",
+    "culture_slug": null,
+    "status": "PUBLISHED",
+    "tags": ["校园打卡", "一校三园", "共同体"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "在十三行故事里，商品从来不是独自旅行",
+    "content": "一件外销瓷背后有原料、工匠、行商、翻译、船员和海外买家。我们沿着这条链整理资料后，才理解“千年商都”不是一句繁华口号。地图中所有历史位置都标注了依据，无法确认的部分明确写成示意。",
+    "kind": "CULTURE",
+    "culture_slug": "thirteen-factories-trade-culture",
+    "status": "PUBLISHED",
+    "tags": ["十三行", "商贸文化", "文化寻迹"],
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
+  },
+  {
+    "title": "西关大屋不只是一扇趟栊门",
+    "content": "从门口向里看，真正吸引我们的是天井怎样送进光线、廊道怎样连接厅堂。参访全程只进入公开区域，没有拍摄居民私生活；记录也区分了原有构件、后期修缮和我们的空间推测。",
+    "kind": "CULTURE",
+    "culture_slug": "xiguan-mansions",
+    "status": "PUBLISHED",
+    "tags": ["西关大屋", "岭南建筑", "文化寻迹"],
+    "cover_image_url": "/demo/culture-covers/architecture-gardens.jpg"
+  },
+  {
+    "title": "一张早茶桌，坐下了四种时间",
+    "content": "老人慢慢添茶、家长照看孩子、朋友讨论作业、师傅在后场赶下一笼点心。我们征得同意后记录了桌面之外的协作，也没有把个人口味写成“正宗标准”；早茶的文化，正发生在这些共享时间里。",
+    "kind": "CULTURE",
+    "culture_slug": "guangzhou-morning-tea",
+    "status": "PUBLISHED",
+    "tags": ["广州早茶", "饮食文化", "口述记录"],
+    "cover_image_url": "/demo/culture-covers/food-culture.jpg"
+  },
+  {
+    "title": "从一只波罗鸡，走进一场海丝庙会",
+    "content": "我们先查清手工物件与南海神庙庙会的联系，再把地方传说、公开史料和个人体验分开记录。现场拍摄避开仪式核心区域，也没有把参与者当作猎奇素材；文化寻迹首先要学会尊重边界。",
+    "kind": "CULTURE",
+    "culture_slug": "boluo-festival-south-sea-temple",
+    "status": "PUBLISHED",
+    "tags": ["波罗诞", "海丝文化", "民俗边界"],
+    "cover_image_url": "/demo/culture-covers/folk-festivals.jpg"
+  },
+  {
+    "title": "花城四季插画：植物花期仍待复核",
+    "content": "待审核版本。画面把木棉、荷花和年桔放在同一条城市路径上，但当前还没有逐一核对花期、植物形态和场景依据。提交人已标明这是概念插画；审核通过前不会把它描述为真实季节记录。",
+    "kind": "AI",
+    "culture_slug": "guangzhou-flower-city",
+    "status": "PENDING",
+    "tags": ["花城", "植物核验", "待审核"],
+    "cover_image_url": "/demo/culture-covers/guangzhou-city.jpg"
+  },
+  {
+    "title": "陈家祠七种装饰工艺信息图：标注草案",
+    "content": "待审核版本。结构已经按木雕、砖雕、石雕、陶塑、灰塑、铸造和彩绘分层，但部分构件位置仍需与馆方公开资料核对。所有生成细节均标为示意，不会冒充文物实拍。",
+    "kind": "AI",
+    "culture_slug": "chen-clan-academy-decoration",
+    "status": "PENDING",
+    "tags": ["陈家祠", "建筑装饰", "待审核"],
+    "cover_image_url": "/demo/culture-covers/architecture-gardens.jpg"
+  },
+  {
+    "title": "校徽渐变重绘方案：不符合标识规范",
+    "content": "驳回演示内容。投稿擅自改变校徽颜色、比例与组合方式，并把生成版本放在容易被误认为学校官方发布的位置。请删除重绘标识，改用学校提供的规范文件，或以不仿造校徽的独立校园图形重新设计。",
+    "kind": "AI",
+    "culture_slug": "guangzhou-university-emblem",
+    "status": "REJECTED",
+    "tags": ["校徽规范", "审核演示", "驳回"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
+  },
+  {
+    "title": "迎春花市志愿服务记录专题",
+    "content": "下架演示内容。专题活动已经结束，公开信息流暂时移除；后台继续保留花农访谈授权、志愿者排班与垃圾分类记录，后续将在获得参与者确认后整理为不含个人隐私的文化案例。",
+    "kind": "CULTURE",
+    "culture_slug": "guangzhou-spring-flower-market",
+    "status": "OFFLINE",
+    "tags": ["迎春花市", "志愿服务", "活动回顾"],
+    "cover_image_url": "/demo/culture-covers/folk-festivals.jpg"
+  },
+  {
+    "title": "体育场东侧临时绕行提醒",
+    "content": "下架演示内容。临时维护已经结束，绕行提醒从公共社区移除。后台保留记录用于演示校园服务信息的发布、时效确认与下架流程，不再向用户展示已经失效的路线说明。",
+    "kind": "CAMPUS",
+    "culture_slug": null,
+    "status": "OFFLINE",
+    "tags": ["校园服务", "临时公告", "审核演示"],
+    "cover_image_url": "/demo/culture-covers/campus-culture.jpg"
   }
 ]

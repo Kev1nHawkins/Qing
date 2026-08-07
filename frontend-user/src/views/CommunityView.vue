@@ -54,7 +54,7 @@ async function loadPosts() {
   loading.value = true
   error.value = ''
   try {
-    const params: Record<string, string | number> = { pageSize: 20 }
+    const params: Record<string, string | number> = { pageSize: 100 }
     if (activeFilter.value !== 'ALL') params.contentType = activeFilter.value
     const { data } = await api.get('/community/posts', { params })
     posts.value = data.data.items
