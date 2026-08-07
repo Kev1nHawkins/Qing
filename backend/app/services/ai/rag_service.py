@@ -41,7 +41,52 @@ class RAGAnswer:
 class RAGService:
     """执行“检索 → 上下文拼接 → LLM生成”的完整流程。"""
 
-    FALLBACK_ANSWER = "当前知识库中暂未找到足够可靠的相关资料，你可以换一种问法。"
+    FALLBACK_ANSWER = "当前知识库暂无相关资料，无法准确回答。"
+    OUT_OF_SCOPE_ANSWER = "该问题不属于小棉的岭南文化知识范围，我暂时无法回答。"
+    EXPLICIT_OUT_OF_SCOPE_MARKERS = (
+        "与岭南文化无关",
+        "和岭南文化无关",
+        "与广州文化无关",
+        "和广州文化无关",
+        "与校园文化无关",
+        "和校园文化无关",
+    )
+    CULTURE_SCOPE_TERMS = (
+        "岭南",
+        "南粤",
+        "广东",
+        "广州",
+        "广府",
+        "潮汕",
+        "客家",
+        "粤语",
+        "粤剧",
+        "木棉",
+        "红棉",
+        "英雄花",
+        "非遗",
+        "民俗",
+        "传统文化",
+        "文化遗产",
+        "骑楼",
+        "西关",
+        "陈家祠",
+        "岭南园林",
+        "广彩",
+        "广绣",
+        "醒狮",
+        "舞狮",
+        "龙舟",
+        "早茶",
+        "粤菜",
+        "广州大学",
+        "广大校园",
+        "校园文化",
+        "校史",
+        "校训",
+        "校徽",
+        "校歌",
+    )
 
     def __init__(
         self,
@@ -79,25 +124,12 @@ class RAGService:
             item for item in retrieved if float(item.get("score", 0.0)) >= self.min_score
         ]
         if not qualified:
-            if self.external_provider:
-                try:
-                    answer = await self.llm_service.answer_general(clean_question)
-                    return RAGAnswer(
-                        clean_question,
-                        answer,
-                        True,
-                        [],
-                        mode="GENERAL_DEEPSEEK",
-                        provider=self.external_provider,
-                        model=self.external_model or "",
-                        fallback_used=False,
-                    )
-                except Exception as exc:
-                    logger.warning(
-                        "General external LLM unavailable; using safe fallback: %s",
-                        type(exc).__name__,
-                    )
-            return RAGAnswer(clean_question, self.FALLBACK_ANSWER, False, [])
+            answer = (
+                self.FALLBACK_ANSWER
+                if self._is_culture_related(clean_question)
+                else self.OUT_OF_SCOPE_ANSWER
+            )
+            return RAGAnswer(clean_question, answer, False, [])
 
         context = self._build_context(qualified)
         sources = [
@@ -145,6 +177,17 @@ class RAGService:
             model="local-knowledge",
             fallback_used=True,
         )
+
+    @classmethod
+    def _is_culture_related(cls, question: str) -> bool:
+        """保守识别文化领域问题；不确定时只返回本地安全回答。"""
+        normalized = question.casefold()
+        if any(
+            marker.casefold() in normalized
+            for marker in cls.EXPLICIT_OUT_OF_SCOPE_MARKERS
+        ):
+            return False
+        return any(term.casefold() in normalized for term in cls.CULTURE_SCOPE_TERMS)
 
     @staticmethod
     def _build_context(results: list[dict[str, Any]]) -> str:

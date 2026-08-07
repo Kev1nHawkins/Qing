@@ -33,8 +33,11 @@ class DeferredCreationTaskRunner(CreationTaskRunner):
 
 
 class FailingImageGenerator(ImageGeneratorAdapter):
+    def __init__(self, message: str = "模拟图片供应商失败") -> None:
+        self.message = message
+
     def generate(self, prompt: str) -> Path:
-        raise ImageGenerationResponseError("模拟图片供应商失败")
+        raise ImageGenerationResponseError(self.message)
 
 
 class SwitchableGeneratorFactory:
@@ -125,6 +128,10 @@ def creation_harness(
     runner = DeferredCreationTaskRunner(
         session_factory=session_factory,
         generator_factory=generator_factory,
+        fallback_generator_factory=lambda task_id: MockImageGenerator(
+            task_id=task_id,
+            output_dir=tmp_path / "fallback-generated",
+        ),
     )
 
     async def override_get_db() -> Any:
@@ -226,6 +233,58 @@ def test_generation_failure_is_persisted(creation_harness: CreationHarness) -> N
     assert failed["status"] == "FAILED"
     assert failed["output_url"] is None
     assert failed["error_message"] == "模拟图片供应商失败"
+
+
+def test_external_generation_failure_uses_mock_fallback(
+    creation_harness: CreationHarness,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    creation_harness.runner.settings = Settings(
+        llm_provider="mock",
+        image_generator_provider="cogview",
+        zhipu_api_key="test-key",
+    )
+    creation_harness.generator_factory.should_fail = True
+    creation = creation_harness.create()
+
+    with caplog.at_level("WARNING"):
+        creation_harness.process(creation["id"])
+
+    completed = creation_harness.get(creation["id"])
+    assert completed["status"] == "SUCCESS"
+    assert completed["output_url"].endswith(f"/creation_{creation['id']}.svg")
+    assert completed["generationMode"] == "MOCK_TEMPLATE"
+    assert completed["provider"] == "mock"
+    assert completed["imageSource"] == "local_svg_template"
+    assert completed["fallbackUsed"] is True
+    assert completed["error_message"] is None
+    assert "External image generation failed; using mock fallback" in caplog.text
+
+
+def test_external_and_mock_generation_failure_is_persisted(
+    creation_harness: CreationHarness,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    creation_harness.runner.settings = Settings(
+        llm_provider="mock",
+        image_generator_provider="cogview",
+        zhipu_api_key="test-key",
+    )
+    creation_harness.generator_factory.should_fail = True
+    creation_harness.runner.fallback_generator_factory = (
+        lambda task_id: FailingImageGenerator("模拟Mock降级失败")
+    )
+    creation = creation_harness.create()
+
+    with caplog.at_level("WARNING"):
+        creation_harness.process(creation["id"])
+
+    failed = creation_harness.get(creation["id"])
+    assert failed["status"] == "FAILED"
+    assert failed["output_url"] is None
+    assert failed["error_message"] == "Mock降级图片生成失败：模拟Mock降级失败"
+    assert "External image generation failed; using mock fallback" in caplog.text
+    assert "Mock image fallback failed" in caplog.text
 
 
 def test_failed_creation_can_retry_to_success(
