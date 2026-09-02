@@ -109,6 +109,14 @@ async function ask(text?: string) {
   if (!content || guideLoading.value) return
   messages.value.push({ from: 'user', text: content })
   question.value = ''
+  if (content.length < 2) {
+    messages.value.push({ from: 'guide', text: '请至少输入 2 个字符，让我更准确地理解你的问题。' })
+    return
+  }
+  if (content.length > 500) {
+    messages.value.push({ from: 'guide', text: '问题最多支持 500 个字符，请精简后再发送。' })
+    return
+  }
   guideLoading.value = true
   try {
     const { data } = await api.post<{ data: { answer: string } }>('/ai/chat', {
@@ -116,9 +124,12 @@ async function ask(text?: string) {
     })
     messages.value.push({ from: 'guide', text: data.data.answer })
   } catch (event) {
+    const message = (event as Error).message
     messages.value.push({
       from: 'guide',
-      text: `问答服务暂时不可用：${(event as Error).message}`,
+      text: message === '请求参数校验失败'
+        ? '问题格式不符合要求，请输入 2–500 个字符后重试。'
+        : `问答服务暂时不可用：${message}`,
     })
   } finally {
     guideLoading.value = false
