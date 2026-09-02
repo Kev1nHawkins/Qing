@@ -42,6 +42,7 @@ class RAGService:
     """执行“检索 → 上下文拼接 → LLM生成”的完整流程。"""
 
     FALLBACK_ANSWER = "当前知识库中暂未找到足够可靠的相关资料，你可以换一种问法。"
+    KEYWORD_MIN_SCORE = 0.67
 
     def __init__(
         self,
@@ -75,8 +76,16 @@ class RAGService:
         except Exception as exc:
             logger.warning("Knowledge retrieval failed; returning safe fallback: %s", type(exc).__name__)
             retrieved = []
+        retrieval_mode = getattr(self.retriever, "last_mode", "vector")
+        effective_min_score = (
+            max(self.min_score, self.KEYWORD_MIN_SCORE)
+            if retrieval_mode == "keyword"
+            else self.min_score
+        )
         qualified = [
-            item for item in retrieved if float(item.get("score", 0.0)) >= self.min_score
+            item
+            for item in retrieved
+            if float(item.get("score", 0.0)) >= effective_min_score
         ]
         if not qualified:
             if self.external_provider:
@@ -109,7 +118,6 @@ class RAGService:
             )
             for item in qualified
         ]
-        retrieval_mode = getattr(self.retriever, "last_mode", "vector")
         if self.external_provider:
             try:
                 answer = await self.llm_service.answer(clean_question, context)

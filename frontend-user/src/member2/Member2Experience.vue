@@ -46,7 +46,19 @@ const authLoading = ref(false)
 const authError = ref('')
 const currentUser = ref<{ username: string; nickname: string; points_total: number } | null>(null)
 const mine = ref({ badges: 0, creations: 0, records: 0 })
-const messages = ref([
+interface GuideMessage {
+  from: 'guide' | 'user'
+  text: string
+  meta?: string
+}
+interface AIChatResult {
+  answer: string
+  mode: string
+  provider: string
+  model: string
+  fallbackUsed: boolean
+}
+const messages = ref<GuideMessage[]>([
   { from: 'guide', text: '你好，我是小棉。我们可以从广州的市花木棉出发，一起寻找岭南文化在广州大学校园里的当代表达。' },
 ])
 const categories = computed(() => ['全部', ...new Set(cultures.value.map(item => item.category))])
@@ -119,10 +131,22 @@ async function ask(text?: string) {
   }
   guideLoading.value = true
   try {
-    const { data } = await api.post<{ data: { answer: string } }>('/ai/chat', {
+    const { data } = await api.post<{ data: AIChatResult }>('/ai/chat', {
       question: content,
     })
-    messages.value.push({ from: 'guide', text: data.data.answer })
+    const result = data.data
+    const modeLabels: Record<string, string> = {
+      RAG_DEEPSEEK: '向量知识检索',
+      KEYWORD_DEEPSEEK: '文化知识检索',
+      GENERAL_DEEPSEEK: '通用问答',
+      PRESET_FALLBACK: '本地知识降级',
+    }
+    const provider = result.provider === 'deepseek' ? 'DeepSeek' : result.provider
+    messages.value.push({
+      from: 'guide',
+      text: result.answer,
+      meta: `${provider} · ${result.model || '未标注模型'} · ${modeLabels[result.mode] || result.mode}${result.fallbackUsed ? ' · 已降级' : ''}`,
+    })
   } catch (event) {
     const message = (event as Error).message
     messages.value.push({
@@ -276,7 +300,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
       <template v-else-if="view === 'guide'">
         <section class="m2-page-head"><p class="m2-kicker">AI CULTURE GUIDE</p><h1>你好，我是小棉</h1><p>以木棉为文化名片，陪你连接广州城市记忆与广州大学校园生活。</p></section>
-        <section class="m2-guide"><aside><XiaomianMascot /><h2>数字人 · 小棉</h2><p>岭南文化校园导览员</p><small>后端 RAG 问答 · Provider 由环境变量配置</small></aside><div class="m2-chat"><div class="m2-messages"><p v-for="(message,index) in messages" :key="index" :class="message.from">{{ message.text }}</p></div><div class="m2-prompts"><button :disabled="guideLoading" @click="ask('木棉为什么是广州的市花？')">木棉与广州</button><button :disabled="guideLoading" @click="ask('岭南文化在广大校园里有哪些线索？')">广大校园线索</button><button :disabled="guideLoading" @click="ask('如何参加红棉寻迹？')">红棉寻迹</button></div><form @submit.prevent="ask()"><input v-model="question" aria-label="向小棉提问" placeholder="输入你想了解的岭南文化问题" /><button type="submit" :disabled="guideLoading">{{ guideLoading ? '回答中…' : '发送' }}</button></form></div></section>
+        <section class="m2-guide"><aside><XiaomianMascot /><h2>数字人 · 小棉</h2><p>岭南文化校园导览员</p><small>后端 RAG 问答 · Provider 由环境变量配置</small></aside><div class="m2-chat"><div class="m2-messages"><p v-for="(message,index) in messages" :key="index" :class="message.from"><span>{{ message.text }}</span><small v-if="message.meta">{{ message.meta }}</small></p></div><div class="m2-prompts"><button :disabled="guideLoading" @click="ask('木棉为什么是广州的市花？')">木棉与广州</button><button :disabled="guideLoading" @click="ask('岭南文化在广大校园里有哪些线索？')">广大校园线索</button><button :disabled="guideLoading" @click="ask('如何参加红棉寻迹？')">红棉寻迹</button></div><form @submit.prevent="ask()"><input v-model="question" aria-label="向小棉提问" placeholder="输入你想了解的岭南文化问题" /><button type="submit" :disabled="guideLoading">{{ guideLoading ? '回答中…' : '发送' }}</button></form></div></section>
       </template>
 
       <template v-else-if="view === 'create'">
