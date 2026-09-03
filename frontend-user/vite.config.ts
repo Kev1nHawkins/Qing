@@ -1,9 +1,12 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const envDir = fileURLToPath(new URL('../', import.meta.url))
+  const env = loadEnv(mode, envDir, '')
   return {
+    envDir,
     plugins: [vue()],
     server: {
       host: '0.0.0.0',

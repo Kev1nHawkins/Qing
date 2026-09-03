@@ -47,6 +47,23 @@ class VectorRetriever:
         ]
 
 
+class LowConfidenceKeywordRetriever:
+    last_mode = "keyword"
+
+    def retrieve(self, query: str, top_k: int = 5):
+        return [
+            {
+                "text": "木棉是广州市花。",
+                "metadata": {
+                    "source_path": "01_hongmian.md",
+                    "title": "木棉文化",
+                    "section": "简介",
+                },
+                "score": 0.64,
+            }
+        ]
+
+
 def build_service(*, deepseek: bool = False) -> RAGService:
     keyword = KeywordKnowledgeRetriever(KNOWLEDGE)
     retriever = ResilientKnowledgeRetriever(FailingRetriever(), keyword)
@@ -104,6 +121,23 @@ async def test_unknown_question_uses_general_deepseek_when_configured() -> None:
     ).answer("请介绍太阳系的八大行星。")
     assert result.answerable is True
     assert result.answer
+    assert result.sources == []
+    assert result.mode == "GENERAL_DEEPSEEK"
+    assert result.provider == "deepseek"
+    assert result.fallback_used is False
+
+
+@pytest.mark.asyncio
+async def test_low_confidence_keyword_match_uses_general_deepseek() -> None:
+    fallback = LLMService(MockLLM(), PROMPT)
+    result = await RAGService(
+        retriever=LowConfidenceKeywordRetriever(),
+        llm_service=LLMService(SuccessLLM(), PROMPT),
+        fallback_llm_service=fallback,
+        external_provider="deepseek",
+        external_model="configured-model",
+    ).answer("请问你背后的开发团队是什么？")
+    assert result.answerable is True
     assert result.sources == []
     assert result.mode == "GENERAL_DEEPSEEK"
     assert result.provider == "deepseek"

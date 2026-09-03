@@ -33,16 +33,6 @@ const kapokTrailTokens: Record<number, CulturalToken> = {
     tone: 'jade',
   },
   3: {
-    code: 'SPORTS-GUANGZHOU',
-    name: '活力羊城令',
-    glyph: '跃',
-    figure: '亚运活力使者',
-    theme: '拼搏 · 开放 · 同行',
-    message: '你已点亮校园体育坐标。从广州亚运会到全运会，城市体育精神在每一次奔跑与协作中延续。',
-    knowledge: '广州曾承办第十六届亚洲运动会，并持续以大型综合体育赛事连接城市更新、志愿服务与全民健身。',
-    tone: 'gold',
-  },
-  4: {
     code: 'THIRTEEN-FACTORIES',
     name: '海丝商都令',
     glyph: '舶',
@@ -51,6 +41,16 @@ const kapokTrailTokens: Record<number, CulturalToken> = {
     message: '从校史馆回望广州城。十三行见证了广州连接世界的商贸往来，也留下跨文化交流的城市基因。',
     knowledge: '清代广州十三行曾是重要的对外贸易机构群体，广州由此形成海贸、工艺与多元文化交汇的历史图景。',
     tone: 'ocean',
+  },
+  4: {
+    code: 'SPORTS-GUANGZHOU',
+    name: '活力羊城令',
+    glyph: '跃',
+    figure: '亚运活力使者',
+    theme: '拼搏 · 开放 · 同行',
+    message: '你已点亮校园体育坐标。从广州亚运会到全运会，城市体育精神在每一次奔跑与协作中延续。',
+    knowledge: '广州曾承办第十六届亚洲运动会，并持续以大型综合体育赛事连接城市更新、志愿服务与全民健身。',
+    tone: 'gold',
   },
   5: {
     code: 'HERO-FLAME',
