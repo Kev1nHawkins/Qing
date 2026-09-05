@@ -7,7 +7,7 @@ from app.api.dependencies import AdminUser, CurrentUser, DbSession
 from app.api.helpers import apply_changes, get_or_404, paginated
 from app.core.response import success
 from app.models.creation import AICreation, CreationTemplate
-from app.models.enums import CreationStatus
+from app.models.enums import CreationStatus, PublishStatus
 from app.schemas.creation import (
     CreationRead,
     CreationRequest,
@@ -16,6 +16,7 @@ from app.schemas.creation import (
     TemplateUpdate,
 )
 from app.services.creation.prompt_service import CreationPromptService
+from app.services.creation.template_validation import validate_template_contract
 from app.services.creation.task_runner import (
     CreationTaskRunner,
     get_creation_task_runner,
@@ -33,8 +34,12 @@ async def list_templates(
     return success(
         await paginated(
             db,
-            stmt=select(CreationTemplate).order_by(CreationTemplate.id),
-            count_stmt=select(func.count(CreationTemplate.id)),
+            stmt=select(CreationTemplate)
+            .where(CreationTemplate.status == PublishStatus.PUBLISHED.value)
+            .order_by(CreationTemplate.id),
+            count_stmt=select(func.count(CreationTemplate.id)).where(
+                CreationTemplate.status == PublishStatus.PUBLISHED.value
+            ),
             page=page,
             page_size=page_size,
             schema=TemplateRead,
@@ -58,6 +63,15 @@ async def update_template(
     template_id: int, payload: TemplateUpdate, db: DbSession, _: AdminUser
 ) -> dict:
     template = await get_or_404(db, CreationTemplate, template_id, "创作模板")
+    changes = payload.model_dump(exclude_unset=True)
+    prompt_template = changes.get("prompt_template", template.prompt_template)
+    options_schema = changes.get("options_schema", template.options_schema)
+    if options_schema is None:
+        raise HTTPException(status_code=422, detail="模板至少需要一个选项变量")
+    try:
+        validate_template_contract(prompt_template, options_schema)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     apply_changes(template, payload)
     await db.commit()
     await db.refresh(template)
@@ -75,6 +89,8 @@ async def create_creation(
     ],
 ) -> dict:
     template = await get_or_404(db, CreationTemplate, payload.template_id, "创作模板")
+    if template.status != PublishStatus.PUBLISHED.value:
+        raise HTTPException(status_code=409, detail="当前创作模板未发布")
     try:
         prompt = CreationPromptService().build(
             template.prompt_template,

@@ -7,18 +7,76 @@ from app.api.dependencies import AdminUser, DbSession
 from app.api.helpers import get_or_404, paginated
 from app.core.response import success
 from app.models.community import Post
-from app.models.creation import AICreation
+from app.models.creation import AICreation, CreationTemplate
 from app.models.culture import CultureItem
-from app.models.enums import PointReason, PostStatus
+from app.models.enums import PointReason, PostStatus, PublishStatus
 from app.models.points import PointRecord
 from app.models.route import UserTaskRecord
 from app.models.user import User
 from app.schemas.auth import UserRead
+from app.schemas.creation import TemplateRead
 from app.schemas.points import AdminPointAdjust, AdminPostReview
 from app.services.community import post_load_options, post_payload
 from app.services.points import award_points
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+@router.get("/creation-templates", summary="AI 创作模板管理列表")
+async def list_creation_templates(
+    db: DbSession,
+    _: AdminUser,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
+    status: PublishStatus | None = None,
+    keyword: str | None = Query(None, max_length=120),
+) -> dict:
+    filters = []
+    if status:
+        filters.append(CreationTemplate.status == status.value)
+    if keyword and keyword.strip():
+        normalized = f"%{keyword.strip()}%"
+        filters.append(
+            or_(
+                CreationTemplate.name.ilike(normalized),
+                CreationTemplate.code.ilike(normalized),
+                CreationTemplate.description.ilike(normalized),
+            )
+        )
+
+    total = int(
+        (await db.scalar(select(func.count(CreationTemplate.id)).where(*filters))) or 0
+    )
+    templates = (
+        await db.scalars(
+            select(CreationTemplate)
+            .where(*filters)
+            .order_by(CreationTemplate.updated_at.desc(), CreationTemplate.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).all()
+    grouped = (
+        await db.execute(
+            select(CreationTemplate.status, func.count(CreationTemplate.id)).group_by(
+                CreationTemplate.status
+            )
+        )
+    ).all()
+    status_counts = {item.value: 0 for item in PublishStatus}
+    status_counts.update({item_status: int(count) for item_status, count in grouped})
+    return success(
+        {
+            "total": total,
+            "items": [
+                TemplateRead.model_validate(template).model_dump()
+                for template in templates
+            ],
+            "page": page,
+            "pageSize": page_size,
+            "statusCounts": status_counts,
+        }
+    )
 
 
 @router.get("/dashboard", summary="管理看板")

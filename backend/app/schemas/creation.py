@@ -1,30 +1,69 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 from app.models.enums import PublishStatus
 from app.schemas.common import Timestamped
+from app.services.creation.template_validation import (
+    normalize_options_schema,
+    validate_template_contract,
+)
 
 
 class TemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     code: str = Field(min_length=1, max_length=80)
-    description: str = Field(max_length=500)
-    prompt_template: str
-    options_schema: dict | None = None
+    description: str = Field(min_length=1, max_length=500)
+    prompt_template: str = Field(min_length=1)
+    options_schema: dict[str, list[str]]
     preview_url: str | None = None
     status: PublishStatus = PublishStatus.DRAFT
     culture_item_id: int | None = None
+
+    @field_validator("name", "code", "description", "prompt_template")
+    @classmethod
+    def strip_required_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("字段不能为空")
+        return cleaned
+
+    @field_validator("options_schema", mode="before")
+    @classmethod
+    def validate_options(cls, value: object) -> dict[str, list[str]]:
+        return normalize_options_schema(value)
+
+    @model_validator(mode="after")
+    def validate_prompt_options(self) -> "TemplateCreate":
+        validate_template_contract(self.prompt_template, self.options_schema)
+        return self
 
 
 class TemplateUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     prompt_template: str | None = None
-    options_schema: dict | None = None
+    options_schema: dict[str, list[str]] | None = None
     preview_url: str | None = None
     status: PublishStatus | None = None
     culture_item_id: int | None = None
+
+    @field_validator("name", "description", "prompt_template")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("字段不能为空")
+        return cleaned
+
+    @field_validator("options_schema", mode="before")
+    @classmethod
+    def validate_options(cls, value: object) -> dict[str, list[str]] | None:
+        if value is None:
+            return None
+        return normalize_options_schema(value)
 
 
 class TemplateRead(Timestamped):
@@ -32,7 +71,7 @@ class TemplateRead(Timestamped):
     code: str
     description: str
     prompt_template: str
-    options_schema: dict | None
+    options_schema: dict[str, list[str]] | None
     preview_url: str | None
     status: str
     culture_item_id: int | None

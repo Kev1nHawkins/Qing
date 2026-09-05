@@ -13,8 +13,7 @@ const router = createRouter({
     },
     {
       path: '/templates',
-      component: () => import('@/views/PlaceholderView.vue'),
-      props: { title: 'AI 模板', note: '由成员 3 在此接入 Prompt 与生成模板管理。' },
+      component: () => import('@/views/CreationTemplateManageView.vue'),
     },
     {
       path: '/posts',
