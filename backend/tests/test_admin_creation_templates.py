@@ -18,6 +18,16 @@ from app.models.base import Base
 from app.models.creation import CreationTemplate
 from app.models.enums import PublishStatus
 from app.models.user import Role, User
+from app.scripts.seed import ensure_creation_templates
+from app.services.creation.task_runner import get_creation_task_runner
+
+
+class NoopCreationTaskRunner:
+    def __init__(self) -> None:
+        self.submitted: list[int] = []
+
+    def submit(self, creation_id: int) -> None:
+        self.submitted.append(creation_id)
 
 
 def template_payload(*, code: str = "new-poster") -> dict:
@@ -103,6 +113,7 @@ def template_client(tmp_path: Path) -> Iterator[dict]:
                 {
                     "admin_id": admin.id,
                     "user_id": user.id,
+                    "published_id": templates[0].id,
                     "draft_id": templates[1].id,
                 }
             )
@@ -118,7 +129,9 @@ def template_client(tmp_path: Path) -> Iterator[dict]:
                 await session.rollback()
                 raise
 
+    runner = NoopCreationTaskRunner()
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_creation_task_runner] = lambda: runner
     headers = {
         "admin": {
             "Authorization": "Bearer "
@@ -130,7 +143,13 @@ def template_client(tmp_path: Path) -> Iterator[dict]:
         },
     }
     with TestClient(app) as client:
-        yield {"client": client, "headers": headers, "state": state}
+        yield {
+            "client": client,
+            "headers": headers,
+            "state": state,
+            "runner": runner,
+            "session_factory": session_factory,
+        }
     app.dependency_overrides.clear()
     asyncio.run(engine.dispose())
 
@@ -223,6 +242,70 @@ def test_duplicate_code_returns_conflict(template_client: dict) -> None:
         json=template_payload(code="published-poster"),
     )
     assert response.status_code == 409
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {"subject": "木棉", "unknown": "额外值"},
+        {"subject": "不在候选范围内"},
+        {"subject": 123},
+    ],
+)
+def test_creation_options_must_match_template_schema(
+    template_client: dict,
+    options: dict,
+) -> None:
+    response = template_client["client"].post(
+        "/api/v1/creations",
+        headers=template_client["headers"]["user"],
+        json={
+            "template_id": template_client["state"]["published_id"],
+            "title": "选项校验测试",
+            "options": options,
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_demo_templates_are_idempotent_and_can_submit(template_client: dict) -> None:
+    async def seed_twice() -> None:
+        session_factory = template_client["session_factory"]
+        async with session_factory() as session:
+            await ensure_creation_templates(session, None)
+            await session.commit()
+            await ensure_creation_templates(session, None)
+            await session.commit()
+
+    asyncio.run(seed_twice())
+
+    response = template_client["client"].get(
+        "/api/v1/creations/templates",
+        params={"pageSize": 100},
+    )
+    assert response.status_code == 200
+    items = response.json()["data"]["items"]
+    seeded_codes = {"kapok-poster", "lion-dance-poster", "guangcai-poster"}
+    assert all(sum(item["code"] == code for item in items) == 1 for code in seeded_codes)
+
+    for template in [item for item in items if item["code"] in seeded_codes]:
+        options = {
+            name: values[0]
+            for name, values in template["options_schema"].items()
+        }
+        submitted = template_client["client"].post(
+            "/api/v1/creations",
+            headers=template_client["headers"]["user"],
+            json={
+                "template_id": template["id"],
+                "title": f"{template['name']}测试",
+                "options": options,
+            },
+        )
+        assert submitted.status_code == 202
+
+    assert len(template_client["runner"].submitted) == 3
 
 
 def test_unpublished_template_cannot_start_creation(template_client: dict) -> None:

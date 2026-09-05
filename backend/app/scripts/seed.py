@@ -2,6 +2,7 @@ import asyncio
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -250,25 +251,65 @@ async def ensure_demo_routes(session, admin: User) -> None:
                     )
                 )
 
-    template = await session.scalar(
-        select(CreationTemplate).where(CreationTemplate.code == "kapok-poster")
-    )
-    if not template:
-        session.add(
-            CreationTemplate(
-                name="红棉国潮海报",
-                code="kapok-poster",
-                description="组合文化元素、校园地标与视觉风格，生成文化海报。",
-                prompt_template="以{culture_element}和{campus_landmark}为主题，创作{style}风格文化海报。",
-                options_schema={
-                    "culture_element": ["木棉", "醒狮", "广彩"],
-                    "campus_landmark": ["广州大学图书馆", "红棉广场"],
-                    "style": ["国潮", "剪纸", "现代插画"],
-                },
-                status=PublishStatus.PUBLISHED.value,
-                culture_item_id=culture.id,
-            )
+    await ensure_creation_templates(session, culture.id)
+
+
+async def ensure_creation_templates(
+    session: AsyncSession,
+    kapok_culture_id: int | None,
+) -> None:
+    template_specs = [
+        {
+            "name": "红棉国潮海报",
+            "code": "kapok-poster",
+            "description": "组合文化元素、校园地标与视觉风格，生成文化海报。",
+            "prompt_template": "以{culture_element}和{campus_landmark}为主题，创作{style}风格文化海报。",
+            "options_schema": {
+                "culture_element": ["木棉", "醒狮", "广彩"],
+                "campus_landmark": ["广州大学图书馆", "红棉广场"],
+                "style": ["国潮", "剪纸", "现代插画"],
+            },
+            "preview_url": "/demo/kapok.jpg",
+            "culture_item_id": kapok_culture_id,
+        },
+        {
+            "name": "醒狮校园活力海报",
+            "code": "lion-dance-poster",
+            "description": "用醒狮形象、校园空间与青年潮流语言表达广府活力。",
+            "prompt_template": "以{culture_element}为主视觉，在{campus_landmark}场景中创作{style}风格醒狮校园海报。",
+            "options_schema": {
+                "culture_element": ["醒狮", "南狮", "锣鼓纹样"],
+                "campus_landmark": ["广州大学正门", "何世杰体育馆广场"],
+                "style": ["国潮插画", "剪纸", "潮玩"],
+            },
+            "preview_url": None,
+            "culture_item_id": None,
+        },
+        {
+            "name": "广彩校园纹样海报",
+            "code": "guangcai-poster",
+            "description": "将广彩纹样转译为连接传统工艺与校园生活的视觉设计。",
+            "prompt_template": "围绕{culture_element}纹样，在{campus_landmark}场景中设计{style}风格校园文化海报。",
+            "options_schema": {
+                "culture_element": ["广彩", "缠枝纹", "岭南花鸟"],
+                "campus_landmark": ["广州大学图书馆", "德信亭", "教学楼中庭"],
+                "style": ["现代插画", "典雅国风", "信息设计"],
+            },
+            "preview_url": None,
+            "culture_item_id": None,
+        },
+    ]
+    for spec in template_specs:
+        template = await session.scalar(
+            select(CreationTemplate).where(CreationTemplate.code == spec["code"])
         )
+        if not template:
+            session.add(
+                CreationTemplate(
+                    **spec,
+                    status=PublishStatus.PUBLISHED.value,
+                )
+            )
 
 
 async def main() -> None:

@@ -16,7 +16,10 @@ from app.schemas.creation import (
     TemplateUpdate,
 )
 from app.services.creation.prompt_service import CreationPromptService
-from app.services.creation.template_validation import validate_template_contract
+from app.services.creation.template_validation import (
+    validate_creation_options,
+    validate_template_contract,
+)
 from app.services.creation.task_runner import (
     CreationTaskRunner,
     get_creation_task_runner,
@@ -92,9 +95,16 @@ async def create_creation(
     if template.status != PublishStatus.PUBLISHED.value:
         raise HTTPException(status_code=409, detail="当前创作模板未发布")
     try:
+        options = validate_creation_options(
+            payload.options,
+            template.options_schema or {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
         prompt = CreationPromptService().build(
             template.prompt_template,
-            payload.options,
+            options,
         )
     except KeyError as exc:
         raise HTTPException(status_code=422, detail=f"缺少模板选项：{exc.args[0]}") from exc
@@ -104,7 +114,7 @@ async def create_creation(
         culture_item_id=payload.culture_item_id or template.culture_item_id,
         title=payload.title,
         prompt=prompt,
-        input_payload=payload.options,
+        input_payload=options,
         status=CreationStatus.PENDING.value,
     )
     db.add(creation)

@@ -1,30 +1,28 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PosterStudio from '@/components/PosterStudio.vue'
 import { api } from '@/services/api'
-import type { CreationTemplate, Culture, PageData } from '@/types'
+import type { CreationTemplate, PageData } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 const templates = ref<CreationTemplate[]>([])
-const cultures = ref<Culture[]>([])
 const loading = ref(true)
 const error = ref('')
+const requestedTemplateCode = computed(() =>
+  typeof route.query.template === 'string' ? route.query.template : undefined,
+)
 
 async function loadCreationData() {
   loading.value = true
   error.value = ''
   try {
-    const [templateResponse, cultureResponse] = await Promise.all([
-      api.get<{ data: PageData<CreationTemplate> }>('/creations/templates', {
-        params: { pageSize: 20 },
-      }),
-      api.get<{ data: PageData<Culture> }>('/cultures', {
-        params: { pageSize: 100 },
-      }),
-    ])
+    const templateResponse = await api.get<{ data: PageData<CreationTemplate> }>(
+      '/creations/templates',
+      { params: { pageSize: 20 } },
+    )
     templates.value = templateResponse.data.data.items
-    cultures.value = cultureResponse.data.data.items
   } catch (event) {
     error.value = (event as Error).message
   } finally {
@@ -33,7 +31,12 @@ async function loadCreationData() {
 }
 
 function requestLogin() {
-  router.push({ path: '/login', query: { redirect: '/creation' } })
+  router.push({ path: '/login', query: { redirect: route.fullPath } })
+}
+
+function syncTemplateCode(code: string) {
+  if (route.query.template === code) return
+  router.replace({ query: { ...route.query, template: code } })
 }
 
 onMounted(loadCreationData)
@@ -62,9 +65,10 @@ onMounted(loadCreationData)
   </section>
   <PosterStudio
     v-else
-    :template="templates[0]"
-    :cultures="cultures"
+    :templates="templates"
+    :initial-template-code="requestedTemplateCode"
     @login="requestLogin"
+    @template-change="syncTemplateCode"
   />
 
   <aside class="creation-handoff">

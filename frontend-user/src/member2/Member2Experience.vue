@@ -293,7 +293,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
       <template v-else-if="view === 'create'">
         <section class="m2-page-head m2-create-head"><p class="m2-kicker">AI CULTURE CREATION</p><h1>文化海报共创工作台</h1><p>选一选元素、地标和风格，马上开始你的岭南文化创作 🎨</p></section>
-        <PosterStudio :template="templates[0]" :cultures="cultures" @login="navigate('profile')" />
+        <PosterStudio :templates="templates" @login="navigate('profile')" />
       </template>
 
       <template v-else-if="view === 'profile'">

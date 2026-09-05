@@ -64,3 +64,34 @@ def validate_template_contract(
         messages.append(f"选项未在 Prompt 中使用：{', '.join(unused_options)}")
     if messages:
         raise ValueError("；".join(messages))
+
+
+def validate_creation_options(
+    value: Any,
+    options_schema: dict[str, list[str]],
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError("创作选项必须是对象")
+
+    option_names = set(options_schema)
+    provided_names = set(value)
+    missing = sorted(option_names - provided_names)
+    unknown = sorted(provided_names - option_names)
+    messages: list[str] = []
+    if missing:
+        messages.append(f"缺少模板选项：{', '.join(missing)}")
+    if unknown:
+        messages.append(f"包含未知模板选项：{', '.join(unknown)}")
+    if messages:
+        raise ValueError("；".join(messages))
+
+    normalized: dict[str, str] = {}
+    for name, candidates in options_schema.items():
+        selected = value[name]
+        if not isinstance(selected, str) or not selected.strip():
+            raise ValueError(f"模板选项 {name} 必须是非空字符串")
+        selected = selected.strip()
+        if selected not in candidates:
+            raise ValueError(f"模板选项 {name} 的值不在候选范围内")
+        normalized[name] = selected
+    return normalized
