@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
 
 from app.api.dependencies import AdminUser, DbSession
 from app.api.helpers import apply_changes, get_or_404, paginated
 from app.core.response import success
 from app.models.culture import CultureItem
+from app.models.enums import PublishStatus
 from app.schemas.culture import CultureCreate, CultureRead, CultureUpdate
 
 router = APIRouter(prefix="/cultures", tags=["Culture"])
@@ -18,7 +19,7 @@ async def list_cultures(
     category: str | None = None,
     keyword: str | None = None,
 ) -> dict:
-    filters = []
+    filters = [CultureItem.status == PublishStatus.PUBLISHED.value]
     if category:
         filters.append(CultureItem.category == category)
     if keyword:
@@ -39,7 +40,14 @@ async def list_cultures(
 
 @router.get("/{culture_id}", summary="文化条目详情")
 async def get_culture(culture_id: int, db: DbSession) -> dict:
-    item = await get_or_404(db, CultureItem, culture_id, "文化条目")
+    item = await db.scalar(
+        select(CultureItem).where(
+            CultureItem.id == culture_id,
+            CultureItem.status == PublishStatus.PUBLISHED.value,
+        )
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="文化条目不存在或尚未发布")
     return success(CultureRead.model_validate(item).model_dump())
 
 

@@ -97,16 +97,10 @@ async function loadData() {
   error.value = ''
   try {
     const [routeResponse, locationResponse] = await Promise.all([
-      api.get<{ data: PageData<CultureRoute> }>('/routes', { params: { pageSize: 100 } }),
-      api.get<{ data: PageData<Location> }>('/locations', { params: { pageSize: 100 } }),
+      api.get<{ data: PageData<CultureRoute> }>('/admin/routes', { params: { pageSize: 100 } }),
+      api.get<{ data: PageData<Location> }>('/admin/locations', { params: { pageSize: 100 } }),
     ])
-    const details = await Promise.all(
-      routeResponse.data.data.items.map(async route => {
-        const response = await api.get<{ data: CultureRoute }>(`/routes/${route.id}`)
-        return response.data.data
-      }),
-    )
-    routes.value = details
+    routes.value = routeResponse.data.data.items
     locations.value = locationResponse.data.data.items
     if (!routes.value.some(item => item.id === selectedRouteId.value)) {
       selectedRouteId.value = routes.value[0]?.id

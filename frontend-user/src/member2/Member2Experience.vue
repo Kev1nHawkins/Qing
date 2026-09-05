@@ -5,7 +5,7 @@ import MediaImage from '@/components/MediaImage.vue'
 import PageState from '@/components/PageState.vue'
 import XiaomianMascot from '@/components/XiaomianMascot.vue'
 import CampusSceneCard from '@/components/CampusSceneCard.vue'
-import PosterStudio from '@/components/PosterStudio.vue'
+import CreativeWorkbench from '@/components/CreativeWorkbench.vue'
 import { cultureVisual, visuals } from '@/data/visuals'
 import gzuOfficialLogo from '@/assets/culture/gzu-official-logo.png'
 import type { Badge, CreationTemplate, Culture, CultureRoute, PageData, Post } from '@/types'
@@ -293,7 +293,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
 
       <template v-else-if="view === 'create'">
         <section class="m2-page-head m2-create-head"><p class="m2-kicker">AI CULTURE CREATION</p><h1>文化海报共创工作台</h1><p>选一选元素、地标和风格，马上开始你的岭南文化创作 🎨</p></section>
-        <PosterStudio :templates="templates" @login="navigate('profile')" />
+        <CreativeWorkbench :templates="templates" @login="navigate('profile')" />
       </template>
 
       <template v-else-if="view === 'profile'">

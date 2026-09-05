@@ -12,6 +12,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   login: []
   templateChange: [code: string]
+  busyChange: [busy: boolean]
 }>()
 const fallbackSchema: Record<string, string[]> = {
   culture_element: ['木棉', '醒狮', '广彩'],
@@ -44,6 +45,7 @@ const feedback = ref('')
 const feedbackKind = ref<'info' | 'success' | 'error'>('info')
 const saveFeedback = ref('')
 const savingImage = ref(false)
+watch(generating, value => emit('busyChange', value))
 const isAuthenticated = computed(() => Boolean(localStorage.getItem('accessToken')))
 const isMobileDevice = computed(() => {
   if (typeof navigator === 'undefined') return false

@@ -29,9 +29,15 @@ class MockImageGenerator(ImageGeneratorAdapter):
         ("#174d68", "#de694e", "#f3d47a", "#f5f0e5"),
     )
 
-    def __init__(self, task_id: str, output_dir: Path = DEFAULT_OUTPUT_DIR) -> None:
+    def __init__(
+        self,
+        task_id: str,
+        output_dir: Path = DEFAULT_OUTPUT_DIR,
+        size: str = "768x1344",
+    ) -> None:
         self.task_id = task_id
         self.output_dir = output_dir
+        self.size = size
 
     def generate(self, prompt: str) -> Path:
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -72,7 +78,11 @@ class MockImageGenerator(ImageGeneratorAdapter):
             style_art = f'<g opacity=".42"><rect x="40" y="390" width="220" height="35" fill="{accent}"/><rect x="115" y="445" width="300" height="22" fill="{paper}"/></g>'
         else:
             style_art = f'<circle cx="180" cy="440" r="95" fill="none" stroke="{accent}" stroke-width="18" opacity=".46"/>'
-        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1440" viewBox="0 0 1024 1440">
+        try:
+            width, height = (int(value) for value in self.size.split("x", 1))
+        except (TypeError, ValueError):
+            width, height = 768, 1344
+        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 1024 1440">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="{primary}"/>

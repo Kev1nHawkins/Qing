@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.models  # noqa: F401
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_access_token
 from app.main import app
@@ -20,6 +21,7 @@ from app.models.enums import PublishStatus
 from app.models.user import Role, User
 from app.scripts.seed import ensure_creation_templates
 from app.services.creation.task_runner import get_creation_task_runner
+from app.services.creation.system_templates import SYSTEM_FREE_IMAGE_TEMPLATE_CODE
 
 
 class NoopCreationTaskRunner:
@@ -47,7 +49,9 @@ def template_payload(*, code: str = "new-poster") -> dict:
 
 
 @pytest.fixture
-def template_client(tmp_path: Path) -> Iterator[dict]:
+def template_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[dict]:
+    monkeypatch.setattr(settings, "llm_provider", "mock")
+    monkeypatch.setattr(settings, "image_generator_provider", "mock")
     database_path = (tmp_path / "templates.db").resolve().as_posix()
     engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}")
     session_factory = async_sessionmaker(
@@ -319,3 +323,80 @@ def test_unpublished_template_cannot_start_creation(template_client: dict) -> No
         },
     )
     assert response.status_code == 409
+
+
+def test_system_template_is_hidden_and_free_image_records_request(
+    template_client: dict,
+) -> None:
+    async def seed() -> None:
+        async with template_client["session_factory"]() as session:
+            await ensure_creation_templates(session, None)
+            await session.commit()
+
+    asyncio.run(seed())
+    public_items = template_client["client"].get(
+        "/api/v1/creations/templates"
+    ).json()["data"]["items"]
+    admin_items = template_client["client"].get(
+        "/api/v1/admin/creation-templates",
+        headers=template_client["headers"]["admin"],
+        params={"pageSize": 100},
+    ).json()["data"]["items"]
+    assert SYSTEM_FREE_IMAGE_TEMPLATE_CODE not in {item["code"] for item in public_items}
+    assert SYSTEM_FREE_IMAGE_TEMPLATE_CODE not in {item["code"] for item in admin_items}
+
+    for aspect, size in {
+        "SQUARE": "1024x1024",
+        "PORTRAIT": "768x1344",
+        "LANDSCAPE": "1344x768",
+    }.items():
+        response = template_client["client"].post(
+            "/api/v1/creations/free-image",
+            headers=template_client["headers"]["user"],
+            json={"prompt": "  一座未来感校园建筑  ", "aspectRatio": aspect},
+        )
+        assert response.status_code == 202
+        payload = response.json()["data"]["input_payload"]
+        assert payload["user_prompt"] == "一座未来感校园建筑"
+        assert payload["_kind"] == "FREE_IMAGE"
+        assert payload["_size"] == size
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"prompt": "", "aspectRatio": "SQUARE"},
+        {"prompt": "有效提示", "aspectRatio": "WIDE"},
+        {"prompt": "长" * 2001, "aspectRatio": "PORTRAIT"},
+    ],
+)
+def test_free_image_validates_input(template_client: dict, payload: dict) -> None:
+    response = template_client["client"].post(
+        "/api/v1/creations/free-image",
+        headers=template_client["headers"]["user"],
+        json=payload,
+    )
+    assert response.status_code == 422
+
+
+def test_post_draft_requires_login_and_returns_editable_fields(
+    template_client: dict,
+) -> None:
+    unauthenticated = template_client["client"].post(
+        "/api/v1/ai/post-drafts",
+        json={"prompt": "写一篇校园建筑推文"},
+    )
+    assert unauthenticated.status_code == 401
+
+    response = template_client["client"].post(
+        "/api/v1/ai/post-drafts",
+        headers=template_client["headers"]["user"],
+        json={"prompt": "写一篇校园建筑推文"},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["title"]
+    assert data["content"]
+    assert data["tags"]
+    assert data["provider"] == "mock"
+    assert data["fallbackUsed"] is False

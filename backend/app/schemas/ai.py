@@ -50,3 +50,24 @@ class AIChatData(BaseModel):
     provider: str
     model: str
     fallback_used: bool = Field(alias="fallbackUsed")
+
+
+PostDraftPrompt = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=1000),
+]
+
+
+class PostDraftRequest(BaseModel):
+    prompt: PostDraftPrompt
+
+
+class PostDraftData(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    title: str = Field(max_length=120)
+    content: str = Field(max_length=5000)
+    tags: list[str] = Field(max_length=10)
+    provider: str
+    model: str
+    fallback_used: bool = Field(alias="fallbackUsed")

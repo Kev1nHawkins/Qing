@@ -84,6 +84,19 @@ class CreationRequest(BaseModel):
     options: dict = Field(default_factory=dict)
 
 
+class FreeImageRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    aspect_ratio: str = Field(alias="aspectRatio", pattern=r"^(SQUARE|PORTRAIT|LANDSCAPE)$")
+
+    @field_validator("prompt")
+    @classmethod
+    def strip_prompt(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("提示词不能为空")
+        return cleaned
+
+
 class CreationRead(Timestamped):
     user_id: int
     template_id: int

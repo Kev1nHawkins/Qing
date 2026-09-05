@@ -60,3 +60,10 @@ export interface PublishPostPayload {
   cover_image_url: string | null
   tags: string[]
 }
+
+export interface CommunityPostDraft {
+  version: 1
+  title: string
+  content: string
+  tags: string[]
+}

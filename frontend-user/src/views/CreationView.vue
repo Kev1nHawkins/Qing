@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import PosterStudio from '@/components/PosterStudio.vue'
+import CreativeWorkbench, { type WorkbenchMode } from '@/components/CreativeWorkbench.vue'
 import { api } from '@/services/api'
 import type { CreationTemplate, PageData } from '@/types'
 
@@ -13,6 +13,10 @@ const error = ref('')
 const requestedTemplateCode = computed(() =>
   typeof route.query.template === 'string' ? route.query.template : undefined,
 )
+const requestedMode = computed<WorkbenchMode>(() => {
+  const value = route.query.mode
+  return value === 'free-image' || value === 'post' || value === 'template' ? value : 'template'
+})
 
 async function loadCreationData() {
   loading.value = true
@@ -39,36 +43,39 @@ function syncTemplateCode(code: string) {
   router.replace({ query: { ...route.query, template: code } })
 }
 
-onMounted(loadCreationData)
+function syncMode(mode: WorkbenchMode) {
+  if (route.query.mode === mode) return
+  router.replace({ query: { ...route.query, mode } })
+}
+
+onMounted(() => {
+  syncMode(requestedMode.value)
+  loadCreationData()
+})
 </script>
 
 <template>
   <section class="creation-heading">
     <p>STEP 05 · AI CO-CREATION</p>
     <h1>岭南文化共创工作台</h1>
-    <span>选好文化元素和校园地标，挑一款喜欢的风格，让 AI 帮你把灵感变成海报 🎨</span>
+    <span>选择模板、自由生成图片，或让 AI 帮你整理一篇可编辑的社区推文。</span>
     <ol>
-      <li><b>01</b>挑选文化元素 🌺</li>
-      <li><b>02</b>生成你的海报 ✨</li>
-      <li><b>03</b>分享给社区朋友 📣</li>
+      <li><b>01</b>选择创作模块 🌺</li>
+      <li><b>02</b>写下你的灵感 ✨</li>
+      <li><b>03</b>编辑并分享作品 📣</li>
     </ol>
   </section>
 
-  <section v-if="loading" class="creation-state">正在加载共创模板…</section>
-  <section v-else-if="error" class="creation-state error">
-    <b>创作工作台暂时休息一下</b>
-    <p>{{ error }}</p>
-    <button type="button" @click="loadCreationData">再试一次</button>
-  </section>
-  <section v-else-if="!templates.length" class="creation-state">
-    创作功能正在准备中，稍后再来试试吧！
-  </section>
-  <PosterStudio
-    v-else
+  <CreativeWorkbench
     :templates="templates"
+    :template-loading="loading"
+    :template-error="error"
+    :initial-mode="requestedMode"
     :initial-template-code="requestedTemplateCode"
     @login="requestLogin"
+    @mode-change="syncMode"
     @template-change="syncTemplateCode"
+    @retry-templates="loadCreationData"
   />
 
   <aside class="creation-handoff">
