@@ -7,11 +7,11 @@ from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 HOST_REPOSITORY_ROOT = BACKEND_ROOT.parent
-CONTAINER_DATA_DIR = BACKEND_ROOT / "data"
-DEFAULT_DATA_DIR = (
-    CONTAINER_DATA_DIR if CONTAINER_DATA_DIR.is_dir() else HOST_REPOSITORY_ROOT / "data"
+CONTAINER_TEMPLATE_PATH = BACKEND_ROOT / "data" / "prompts" / "image_prompt.txt"
+HOST_TEMPLATE_PATH = HOST_REPOSITORY_ROOT / "data" / "prompts" / "image_prompt.txt"
+DEFAULT_TEMPLATE_PATH = (
+    CONTAINER_TEMPLATE_PATH if CONTAINER_TEMPLATE_PATH.is_file() else HOST_TEMPLATE_PATH
 )
-DEFAULT_TEMPLATE_PATH = DEFAULT_DATA_DIR / "prompts" / "image_prompt.txt"
 
 
 class ImagePromptBuilder:

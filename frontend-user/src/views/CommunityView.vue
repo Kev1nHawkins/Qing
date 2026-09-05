@@ -7,6 +7,7 @@ import CommunityPostCard from '@/components/CommunityPostCard.vue'
 import { api } from '@/services/api'
 import type {
   CommunityComment,
+  CommunityPostDraft,
   CommunityPost,
   CreationOption,
   CultureOption,
@@ -22,6 +23,7 @@ const cultures = ref<CultureOption[]>([])
 const creations = ref<CreationOption[]>([])
 const initialCreation = ref<CreationOption | null>(null)
 const initialCreationError = ref('')
+const initialDraft = ref<CommunityPostDraft | null>(null)
 const loading = ref(true)
 const error = ref('')
 const notice = ref('')
@@ -49,6 +51,32 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   { key: 'CAMPUS', label: '校园打卡' },
   { key: 'CULTURE', label: '文化寻迹' },
 ]
+
+function consumePostDraft() {
+  if (route.query.draft !== 'ai') return
+  const key = 'lingchao.community.aiDraft.v1'
+  const raw = sessionStorage.getItem(key)
+  sessionStorage.removeItem(key)
+  if (!raw) return
+  try {
+    const value = JSON.parse(raw) as Partial<CommunityPostDraft>
+    if (
+      value.version !== 1
+      || typeof value.title !== 'string'
+      || !value.title.trim()
+      || value.title.length > 120
+      || typeof value.content !== 'string'
+      || !value.content.trim()
+      || value.content.length > 5000
+      || !Array.isArray(value.tags)
+      || value.tags.length > 10
+      || value.tags.some(tag => typeof tag !== 'string')
+    ) return
+    initialDraft.value = value as CommunityPostDraft
+  } catch {
+    initialDraft.value = null
+  }
+}
 
 async function loadPosts() {
   loading.value = true
@@ -179,6 +207,7 @@ async function submitComment(content: string) {
 }
 
 onMounted(async () => {
+  consumePostDraft()
   await Promise.all([loadPosts(), loadReferenceData()])
 })
 </script>
@@ -244,6 +273,7 @@ onMounted(async () => {
           :creations="creations"
           :initial-creation="initialCreation"
           :initial-creation-error="initialCreationError"
+          :initial-draft="initialDraft"
           :logged-in="loggedIn"
           :submitting="submittingPost"
           @publish="publish"

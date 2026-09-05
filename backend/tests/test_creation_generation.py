@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.api.dependencies import get_current_user
-from app.core.config import Settings
+from app.core.config import Settings, settings
 from app.core.database import get_db
 from app.main import app
 from app.models import Base
@@ -23,6 +23,7 @@ from app.services.creation.exceptions import ImageGenerationResponseError
 from app.services.creation.content_service import CreationContentService
 from app.services.creation.image_generator import ImageGeneratorAdapter, MockImageGenerator
 from app.services.creation.task_runner import CreationTaskRunner, get_creation_task_runner
+from app.services.creation.system_templates import SYSTEM_FREE_IMAGE_TEMPLATE_CODE
 
 
 class DeferredCreationTaskRunner(CreationTaskRunner):
@@ -41,11 +42,17 @@ class SwitchableGeneratorFactory:
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = output_dir
         self.should_fail = False
+        self.last_size: str | None = None
 
-    def __call__(self, task_id: str) -> ImageGeneratorAdapter:
+    def __call__(self, task_id: str, *, size: str | None = None) -> ImageGeneratorAdapter:
+        self.last_size = size
         if self.should_fail:
             return FailingImageGenerator()
-        return MockImageGenerator(task_id=task_id, output_dir=self.output_dir)
+        return MockImageGenerator(
+            task_id=task_id,
+            output_dir=self.output_dir,
+            size=size or "768x1344",
+        )
 
 
 class CreationHarness:
@@ -82,6 +89,17 @@ class CreationHarness:
         assert response.status_code == 200
         return response.json()["data"]
 
+    def create_free(self, aspect_ratio: str = "LANDSCAPE") -> dict:
+        response = self.client.post(
+            "/api/v1/creations/free-image",
+            json={
+                "prompt": "雨后的现代图书馆建筑，玻璃幕墙倒映天空",
+                "aspectRatio": aspect_ratio,
+            },
+        )
+        assert response.status_code == 202
+        return response.json()["data"]
+
     def process(self, creation_id: int) -> None:
         asyncio.run(self.runner.process(creation_id))
 
@@ -89,7 +107,10 @@ class CreationHarness:
 @pytest.fixture
 def creation_harness(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Any:
+    monkeypatch.setattr(settings, "llm_provider", "mock")
+    monkeypatch.setattr(settings, "image_generator_provider", "mock")
     database_path = tmp_path / "creation-test.sqlite3"
     engine = create_async_engine(
         f"sqlite+aiosqlite:///{database_path.as_posix()}",
@@ -116,6 +137,18 @@ def creation_harness(
                 culture_item_id=None,
             )
             session.add(template)
+            session.add(
+                CreationTemplate(
+                    name="系统自由图片",
+                    code=SYSTEM_FREE_IMAGE_TEMPLATE_CODE,
+                    description="内部模板",
+                    prompt_template="{prompt}",
+                    options_schema={"prompt": ["SYSTEM_ONLY"]},
+                    preview_url=None,
+                    status=PublishStatus.OFFLINE.value,
+                    culture_item_id=None,
+                )
+            )
             await session.commit()
             await session.refresh(template)
             return template.id
@@ -201,6 +234,24 @@ def test_mock_generation_uses_distinct_template_variants(
     first_path = output_dir / f"creation_{first['id']}.svg"
     second_path = output_dir / f"creation_{second['id']}.svg"
     assert first_path.read_text(encoding="utf-8") != second_path.read_text(encoding="utf-8")
+
+
+def test_free_image_uses_direct_prompt_and_requested_size(
+    creation_harness: CreationHarness,
+) -> None:
+    creation = creation_harness.create_free("LANDSCAPE")
+    creation_harness.process(creation["id"])
+
+    completed = creation_harness.get(creation["id"])
+    generated = (
+        creation_harness.generator_factory.output_dir
+        / f"creation_{creation['id']}.svg"
+    ).read_text(encoding="utf-8")
+    assert creation_harness.generator_factory.last_size == "1344x768"
+    assert 'width="1344" height="768"' in generated
+    assert "雨后的现代图书馆建筑" in generated
+    assert completed["visualPrompt"] == "雨后的现代图书馆建筑，玻璃幕墙倒映天空"
+    assert completed["generationMode"] == "AI_IMAGE_FREE"
 
 
 def test_deepseek_configuration_failure_is_explicit_fallback() -> None:

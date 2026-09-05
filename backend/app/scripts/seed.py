@@ -13,6 +13,7 @@ from app.models.enums import BadgeRuleType, PublishStatus, TaskType
 from app.models.points import Badge
 from app.models.route import Route, RouteTask
 from app.models.user import Role, User
+from app.services.creation.system_templates import SYSTEM_FREE_IMAGE_TEMPLATE_CODE
 
 
 async def ensure_roles(session) -> dict[str, Role]:
@@ -260,6 +261,16 @@ async def ensure_creation_templates(
 ) -> None:
     template_specs = [
         {
+            "name": "系统自由图片",
+            "code": SYSTEM_FREE_IMAGE_TEMPLATE_CODE,
+            "description": "自由图片生成使用的内部系统模板。",
+            "prompt_template": "{prompt}",
+            "options_schema": {"prompt": ["SYSTEM_ONLY"]},
+            "preview_url": None,
+            "culture_item_id": None,
+            "status": PublishStatus.OFFLINE.value,
+        },
+        {
             "name": "红棉国潮海报",
             "code": "kapok-poster",
             "description": "组合文化元素、校园地标与视觉风格，生成文化海报。",
@@ -304,12 +315,9 @@ async def ensure_creation_templates(
             select(CreationTemplate).where(CreationTemplate.code == spec["code"])
         )
         if not template:
-            session.add(
-                CreationTemplate(
-                    **spec,
-                    status=PublishStatus.PUBLISHED.value,
-                )
-            )
+            values = dict(spec)
+            values.setdefault("status", PublishStatus.PUBLISHED.value)
+            session.add(CreationTemplate(**values))
 
 
 async def main() -> None:

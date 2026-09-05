@@ -21,7 +21,7 @@ from app.services.creation.image_generator import ImageGeneratorAdapter
 from app.services.creation.provider_factory import create_image_generator
 
 
-GeneratorFactory = Callable[[str], ImageGeneratorAdapter]
+GeneratorFactory = Callable[..., ImageGeneratorAdapter]
 
 
 class CreationTaskRunner:
@@ -55,22 +55,35 @@ class CreationTaskRunner:
         try:
             base_prompt, input_payload = claimed
             settings = get_settings()
-            content = await CreationContentService(settings).generate(
-                base_prompt=base_prompt,
-                options=input_payload,
-            )
-            generation = self._generation_metadata(content.metadata(), settings)
+            is_free_image = input_payload.get("_kind") == "FREE_IMAGE"
+            if is_free_image:
+                visual_prompt = base_prompt
+                description = f"根据提示词生成的自由图片：{base_prompt[:200]}"
+                generation = self._free_image_metadata(base_prompt, input_payload, settings)
+            else:
+                content = await CreationContentService(settings).generate(
+                    base_prompt=base_prompt,
+                    options=input_payload,
+                )
+                visual_prompt = content.visual_prompt
+                description = content.cultural_description
+                generation = self._generation_metadata(content.metadata(), settings)
             await self._store_generation_plan(
                 creation_id,
-                visual_prompt=content.visual_prompt,
-                description=content.cultural_description,
+                visual_prompt=visual_prompt,
+                description=description,
                 input_payload={**input_payload, "_generation": generation},
             )
-            generator = self.generator_factory(f"creation_{creation_id}")
+            size = input_payload.get("_size") if is_free_image else None
+            generator = (
+                self.generator_factory(f"creation_{creation_id}", size=size)
+                if size
+                else self.generator_factory(f"creation_{creation_id}")
+            )
             generated_path = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
                 generator.generate,
-                content.visual_prompt,
+                visual_prompt,
             )
             output_url = self._to_output_url(generated_path)
         except ImageGenerationError as exc:
@@ -205,6 +218,31 @@ class CreationTaskRunner:
             "textProvider": text_provider,
             "textModel": content["text_model"],
             "imageProvider": image_provider,
+        }
+
+    @staticmethod
+    def _free_image_metadata(
+        visual_prompt: str,
+        input_payload: dict[str, Any],
+        settings: Any,
+    ) -> dict[str, Any]:
+        provider = settings.image_generator_provider.strip().lower()
+        is_external = provider in {"cogview", "zhipu"}
+        return {
+            "provider": provider,
+            "generationMode": "AI_IMAGE_FREE",
+            "model": settings.zhipu_image_model if is_external else "local-template-v2",
+            "imageSource": "external_image_provider" if is_external else "local_svg_template",
+            "fallbackUsed": not is_external,
+            "visualPrompt": visual_prompt,
+            "generatedTitle": f"自由创作 · {visual_prompt[:36]}",
+            "subtitle": input_payload.get("_aspect_ratio", "PORTRAIT"),
+            "tags": ["AI图片", "自由创作"],
+            "suggestedPalette": [],
+            "layoutHint": input_payload.get("_size", "768x1344"),
+            "textProvider": "none",
+            "textModel": "none",
+            "imageProvider": provider,
         }
 
     @staticmethod

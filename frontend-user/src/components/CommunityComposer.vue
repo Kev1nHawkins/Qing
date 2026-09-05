@@ -3,7 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import CommunityIcon from '@/components/CommunityIcon.vue'
 import MediaImage from '@/components/MediaImage.vue'
 import { api } from '@/services/api'
-import type { CreationOption, CultureOption, PublishPostPayload } from '@/types/community'
+import type { CommunityPostDraft, CreationOption, CultureOption, PublishPostPayload } from '@/types/community'
 
 const props = defineProps<{
   cultures: CultureOption[]
@@ -12,6 +12,7 @@ const props = defineProps<{
   submitting: boolean
   initialCreation?: CreationOption | null
   initialCreationError?: string
+  initialDraft?: CommunityPostDraft | null
 }>()
 const emit = defineEmits<{ publish: [payload: PublishPostPayload] }>()
 const form = reactive({ title: '', content: '', cultureItemId: '', creationId: '', coverImageUrl: '', tags: '' })
@@ -31,7 +32,16 @@ function applyCreation(creation: CreationOption | null) {
   form.tags = (creation.tags || []).join('，')
 }
 
+function applyDraft(draft: CommunityPostDraft | null) {
+  if (!draft) return
+  form.creationId = ''
+  form.title = draft.title
+  form.content = draft.content
+  form.tags = draft.tags.join('，')
+}
+
 watch(() => props.initialCreation, creation => applyCreation(creation || null), { immediate: true })
+watch(() => props.initialDraft, draft => applyDraft(draft || null), { immediate: true })
 watch(
   () => form.creationId,
   (value, previous) => {

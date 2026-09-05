@@ -10,10 +10,14 @@ from app.schemas.ai import (
     AIChatRequest,
     AIChatSource,
     CreationSuggestionRead,
+    PostDraftData,
+    PostDraftRequest,
 )
+from app.api.dependencies import CurrentUser
 from app.services.ai.creation_suggestion import build_creation_suggestion
 from app.services.ai.dependencies import get_rag_service
 from app.services.ai.rag_service import RAGService
+from app.services.ai.post_draft_service import PostDraftService
 
 
 router = APIRouter(prefix="/ai", tags=["AI"])
@@ -53,3 +57,21 @@ async def chat(
         fallback_used=result.fallback_used,
     )
     return success(data.model_dump(by_alias=True))
+
+
+@router.post(
+    "/post-drafts",
+    response_model=ApiResponse[PostDraftData],
+    summary="生成可编辑的社区推文草稿",
+)
+async def generate_post_draft(payload: PostDraftRequest, _: CurrentUser) -> dict:
+    draft = await PostDraftService().generate(payload.prompt)
+    data = PostDraftData(
+        title=draft.title,
+        content=draft.content,
+        tags=draft.tags,
+        provider=draft.provider,
+        model=draft.model,
+        fallbackUsed=draft.fallback_used,
+    )
+    return success(data.model_dump(by_alias=True), "推文草稿已生成")

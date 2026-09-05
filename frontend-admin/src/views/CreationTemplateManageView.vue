@@ -138,7 +138,7 @@ async function loadData() {
           status: statusFilter.value || undefined,
         },
       }),
-      api.get<{ data: { items: CultureItem[] } }>('/cultures', {
+      api.get<{ data: { items: CultureItem[] } }>('/admin/cultures', {
         params: { pageSize: 100 },
       }),
     ])

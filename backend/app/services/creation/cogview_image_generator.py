@@ -79,6 +79,7 @@ class CogViewImageGenerator(ImageGeneratorAdapter):
         cls,
         task_id: str,
         settings: Any,
+        size: str | None = None,
         transport: httpx.BaseTransport | None = None,
         output_dir: Path = DEFAULT_OUTPUT_DIR,
     ) -> "CogViewImageGenerator":
@@ -90,7 +91,7 @@ class CogViewImageGenerator(ImageGeneratorAdapter):
             api_key=api_key,
             base_url=settings.zhipu_base_url,
             model=settings.zhipu_image_model,
-            size=settings.zhipu_image_size,
+            size=size or settings.zhipu_image_size,
             quality=settings.zhipu_image_quality,
             watermark_enabled=settings.zhipu_image_watermark_enabled,
             timeout_seconds=settings.zhipu_image_timeout_seconds,

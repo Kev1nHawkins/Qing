@@ -11,6 +11,7 @@ from app.models.enums import CreationStatus, PublishStatus
 from app.schemas.creation import (
     CreationRead,
     CreationRequest,
+    FreeImageRequest,
     TemplateCreate,
     TemplateRead,
     TemplateUpdate,
@@ -24,8 +25,17 @@ from app.services.creation.task_runner import (
     CreationTaskRunner,
     get_creation_task_runner,
 )
+from app.services.creation.system_templates import (
+    SYSTEM_FREE_IMAGE_TEMPLATE_CODE,
+    is_system_template,
+)
 
 router = APIRouter(prefix="/creations", tags=["Creation"])
+FREE_IMAGE_SIZES = {
+    "SQUARE": "1024x1024",
+    "PORTRAIT": "768x1344",
+    "LANDSCAPE": "1344x768",
+}
 
 
 @router.get("/templates", summary="AI 创作模板列表")
@@ -38,10 +48,14 @@ async def list_templates(
         await paginated(
             db,
             stmt=select(CreationTemplate)
-            .where(CreationTemplate.status == PublishStatus.PUBLISHED.value)
+            .where(
+                CreationTemplate.status == PublishStatus.PUBLISHED.value,
+                CreationTemplate.code != SYSTEM_FREE_IMAGE_TEMPLATE_CODE,
+            )
             .order_by(CreationTemplate.id),
             count_stmt=select(func.count(CreationTemplate.id)).where(
-                CreationTemplate.status == PublishStatus.PUBLISHED.value
+                CreationTemplate.status == PublishStatus.PUBLISHED.value,
+                CreationTemplate.code != SYSTEM_FREE_IMAGE_TEMPLATE_CODE,
             ),
             page=page,
             page_size=page_size,
@@ -54,6 +68,8 @@ async def list_templates(
 async def create_template(
     payload: TemplateCreate, db: DbSession, _: AdminUser
 ) -> dict:
+    if is_system_template(payload.code):
+        raise HTTPException(status_code=409, detail="该编码由系统保留")
     template = CreationTemplate(**payload.model_dump(mode="json"))
     db.add(template)
     await db.commit()
@@ -66,6 +82,8 @@ async def update_template(
     template_id: int, payload: TemplateUpdate, db: DbSession, _: AdminUser
 ) -> dict:
     template = await get_or_404(db, CreationTemplate, template_id, "创作模板")
+    if is_system_template(template.code):
+        raise HTTPException(status_code=409, detail="系统模板不能通过管理接口修改")
     changes = payload.model_dump(exclude_unset=True)
     prompt_template = changes.get("prompt_template", template.prompt_template)
     options_schema = changes.get("options_schema", template.options_schema)
@@ -124,6 +142,49 @@ async def create_creation(
     return success(
         CreationRead.model_validate(creation).model_dump(),
         "创作任务已提交，等待 AI 服务处理",
+    )
+
+
+@router.post("/free-image", status_code=202, summary="提交自由图片生成任务")
+async def create_free_image(
+    payload: FreeImageRequest,
+    db: DbSession,
+    current_user: CurrentUser,
+    task_runner: Annotated[
+        CreationTaskRunner,
+        Depends(get_creation_task_runner),
+    ],
+) -> dict:
+    template = await db.scalar(
+        select(CreationTemplate).where(
+            CreationTemplate.code == SYSTEM_FREE_IMAGE_TEMPLATE_CODE
+        )
+    )
+    if not template:
+        raise HTTPException(status_code=503, detail="自由图片功能尚未初始化")
+    size = FREE_IMAGE_SIZES[payload.aspect_ratio]
+    title_prompt = " ".join(payload.prompt.split())
+    creation = AICreation(
+        user_id=current_user.id,
+        template_id=template.id,
+        culture_item_id=None,
+        title=f"自由创作 · {title_prompt[:36]}",
+        prompt=payload.prompt,
+        input_payload={
+            "user_prompt": payload.prompt,
+            "_kind": "FREE_IMAGE",
+            "_aspect_ratio": payload.aspect_ratio,
+            "_size": size,
+        },
+        status=CreationStatus.PENDING.value,
+    )
+    db.add(creation)
+    await db.commit()
+    await db.refresh(creation)
+    task_runner.submit(creation.id)
+    return success(
+        CreationRead.model_validate(creation).model_dump(),
+        "自由图片任务已提交，等待 AI 服务处理",
     )
 
 

@@ -2,24 +2,118 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Query
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
 
 from app.api.dependencies import AdminUser, DbSession
 from app.api.helpers import get_or_404, paginated
 from app.core.response import success
 from app.models.community import Post
 from app.models.creation import AICreation, CreationTemplate
-from app.models.culture import CultureItem
+from app.models.culture import CultureItem, Location
 from app.models.enums import PointReason, PostStatus, PublishStatus
 from app.models.points import PointRecord
-from app.models.route import UserTaskRecord
+from app.models.route import Route, UserTaskRecord
 from app.models.user import User
 from app.schemas.auth import UserRead
 from app.schemas.creation import TemplateRead
+from app.schemas.culture import CultureRead, LocationRead
 from app.schemas.points import AdminPointAdjust, AdminPostReview
+from app.schemas.route import RouteRead, TaskRead
 from app.services.community import post_load_options, post_payload
+from app.services.creation.system_templates import SYSTEM_FREE_IMAGE_TEMPLATE_CODE
 from app.services.points import award_points
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+@router.get("/cultures", summary="文化条目管理列表")
+async def list_admin_cultures(
+    db: DbSession,
+    _: AdminUser,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
+    status: PublishStatus | None = None,
+    category: str | None = None,
+    keyword: str | None = Query(None, max_length=120),
+) -> dict:
+    filters = []
+    if status:
+        filters.append(CultureItem.status == status.value)
+    if category:
+        filters.append(CultureItem.category == category)
+    if keyword and keyword.strip():
+        filters.append(CultureItem.title.ilike(f"%{keyword.strip()}%"))
+    return success(
+        await paginated(
+            db,
+            stmt=select(CultureItem)
+            .where(*filters)
+            .order_by(CultureItem.created_at.desc()),
+            count_stmt=select(func.count(CultureItem.id)).where(*filters),
+            page=page,
+            page_size=page_size,
+            schema=CultureRead,
+        )
+    )
+
+
+@router.get("/locations", summary="校园地点管理列表")
+async def list_admin_locations(
+    db: DbSession,
+    _: AdminUser,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
+    culture_item_id: int | None = None,
+) -> dict:
+    filters = [Location.culture_item_id == culture_item_id] if culture_item_id else []
+    return success(
+        await paginated(
+            db,
+            stmt=select(Location).where(*filters).order_by(Location.id),
+            count_stmt=select(func.count(Location.id)).where(*filters),
+            page=page,
+            page_size=page_size,
+            schema=LocationRead,
+        )
+    )
+
+
+@router.get("/routes", summary="寻迹路线管理列表")
+async def list_admin_routes(
+    db: DbSession,
+    _: AdminUser,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
+    status: PublishStatus | None = None,
+    keyword: str | None = Query(None, max_length=120),
+) -> dict:
+    filters = []
+    if status:
+        filters.append(Route.status == status.value)
+    if keyword and keyword.strip():
+        normalized = f"%{keyword.strip()}%"
+        filters.append(or_(Route.title.ilike(normalized), Route.slug.ilike(normalized)))
+    total = int((await db.scalar(select(func.count(Route.id)).where(*filters))) or 0)
+    routes = (
+        await db.scalars(
+            select(Route)
+            .options(selectinload(Route.tasks))
+            .where(*filters)
+            .order_by(Route.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).all()
+    items = []
+    for route in routes:
+        item = RouteRead.model_validate(route).model_dump()
+        item["tasks"] = [
+            TaskRead.model_validate(task).model_dump() for task in route.tasks
+        ]
+        items.append(item)
+    return success(
+        {"total": total, "items": items, "page": page, "pageSize": page_size}
+    )
 
 
 @router.get("/creation-templates", summary="AI 创作模板管理列表")
@@ -31,7 +125,7 @@ async def list_creation_templates(
     status: PublishStatus | None = None,
     keyword: str | None = Query(None, max_length=120),
 ) -> dict:
-    filters = []
+    filters = [CreationTemplate.code != SYSTEM_FREE_IMAGE_TEMPLATE_CODE]
     if status:
         filters.append(CreationTemplate.status == status.value)
     if keyword and keyword.strip():
@@ -58,9 +152,9 @@ async def list_creation_templates(
     ).all()
     grouped = (
         await db.execute(
-            select(CreationTemplate.status, func.count(CreationTemplate.id)).group_by(
-                CreationTemplate.status
-            )
+            select(CreationTemplate.status, func.count(CreationTemplate.id))
+            .where(CreationTemplate.code != SYSTEM_FREE_IMAGE_TEMPLATE_CODE)
+            .group_by(CreationTemplate.status)
         )
     ).all()
     status_counts = {item.value: 0 for item in PublishStatus}
