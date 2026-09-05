@@ -43,22 +43,22 @@ onMounted(loadCreationData)
   <section class="creation-heading">
     <p>STEP 05 · AI CO-CREATION</p>
     <h1>岭南文化共创工作台</h1>
-    <span>选择文化元素、广大校园地标与视觉风格，交给成员3的 AI 创作服务生成作品，再发布到共创社区。</span>
+    <span>选好文化元素和校园地标，挑一款喜欢的风格，让 AI 帮你把灵感变成海报 🎨</span>
     <ol>
-      <li><b>01</b>选择文化元素</li>
-      <li><b>02</b>提交 AI 创作</li>
-      <li><b>03</b>发布社区传播</li>
+      <li><b>01</b>挑选文化元素 🌺</li>
+      <li><b>02</b>生成你的海报 ✨</li>
+      <li><b>03</b>分享给社区朋友 📣</li>
     </ol>
   </section>
 
   <section v-if="loading" class="creation-state">正在加载共创模板…</section>
   <section v-else-if="error" class="creation-state error">
-    <b>共创服务暂时未就绪</b>
+    <b>创作工作台暂时休息一下</b>
     <p>{{ error }}</p>
-    <button type="button" @click="loadCreationData">重新连接</button>
+    <button type="button" @click="loadCreationData">再试一次</button>
   </section>
   <section v-else-if="!templates.length" class="creation-state">
-    当前没有已发布的 AI 创作模板。
+    创作功能正在准备中，稍后再来试试吧！
   </section>
   <PosterStudio
     v-else
@@ -68,7 +68,7 @@ onMounted(loadCreationData)
   />
 
   <aside class="creation-handoff">
-    <div><small>STEP 06 · SHARE</small><b>生成完成后，把作品发布到社区</b></div>
+    <div><small>STEP 06 · SHARE</small><b>作品完成啦？去社区和大家分享吧！</b></div>
     <RouterLink to="/community">前往共创社区 →</RouterLink>
   </aside>
 </template>

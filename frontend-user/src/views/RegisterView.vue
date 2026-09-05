@@ -45,7 +45,7 @@ async function submit() {
     return
   }
   if (!form.agreed) {
-    error.value = '请先确认演示平台使用说明'
+    error.value = '请先阅读并同意平台使用说明'
     return
   }
   submitting.value = true
@@ -72,11 +72,11 @@ async function submit() {
     <aside>
       <p>LINGCHAO IDENTITY</p>
       <h1>加入岭潮，领取你的文化身份。</h1>
-      <span>注册后即可保存校园寻迹进度、获得文化积分与令牌，并把AI共创作品发布到社区。</span>
+      <span>注册岭潮账号，保存你的寻迹进度，收集积分徽章，还能分享 AI 共创作品。</span>
       <ol>
-        <li><b>01</b>文化探索与知识问答</li>
-        <li><b>02</b>校园打卡与文化令牌</li>
-        <li><b>03</b>AI共创与社区传播</li>
+        <li><b>01</b>认识岭南文化 🌺</li>
+        <li><b>02</b>探索校园地标 📍</li>
+        <li><b>03</b>创作并分享 ✨</li>
       </ol>
     </aside>
     <form @submit.prevent="submit">
@@ -106,7 +106,7 @@ async function submit() {
       </label>
       <label class="register-agreement">
         <input v-model="form.agreed" type="checkbox" />
-        <span>我确认仅将账号用于本比赛演示平台，并遵守校园文化内容发布规范。</span>
+        <span>我已阅读并同意平台使用说明，并遵守校园文化内容发布规范。</span>
       </label>
       <p v-if="error" class="register-error" role="alert">{{ error }}</p>
       <button type="submit" :disabled="submitting">{{ submitting ? '正在创建账号…' : '注册并进入岭潮' }}</button>

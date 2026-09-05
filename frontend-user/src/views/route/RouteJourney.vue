@@ -135,7 +135,7 @@ async function loadRoutes() {
     locations.value = demoRouteFallback.locations
     selectedRouteId.value = routes.value[0]?.id
     serviceFallback.value = true
-    error.value = `真实路线服务暂不可用：${(event as Error).message}`
+    error.value = `路线内容加载失败：${(event as Error).message}`
   } finally {
     loading.value = false
   }
@@ -229,7 +229,7 @@ function goToCreation() {
 async function startRoute() {
   if (!selectedRoute.value) return
   if (serviceFallback.value) {
-    toast.value = '当前为离线路线预览；领取路线需要真实 MySQL 服务。'
+    toast.value = '路线服务暂不可用，请稍后再试。'
     return
   }
   if (!isLoggedIn.value) {
@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
   <div class="route-journey">
     <section class="route-intro">
       <div><p class="m2-kicker">CAMPUS CULTURE TRAIL</p><h1>校园文化寻迹</h1><p>校园路线连接文化讲解、现场观察、文化问答和多种打卡方式。选择路线后从地图任务点开始探索。</p></div>
-      <div class="journey-stats"><article><strong>{{ routes.length }}</strong><span>演示路线</span></article><article><strong>{{ totalTaskCount }}</strong><span>任务节点</span></article><article><strong>{{ pointsTotal }}</strong><span>我的积分</span></article></div>
+      <div class="journey-stats"><article><strong>{{ routes.length }}</strong><span>校园路线</span></article><article><strong>{{ totalTaskCount }}</strong><span>任务节点</span></article><article><strong>{{ pointsTotal }}</strong><span>我的积分</span></article></div>
     </section>
 
     <div v-if="loading" class="journey-state">正在加载校园路线…</div>
@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
     <template v-else>
       <div v-if="serviceFallback" class="journey-service-warning">
         <div><b>离线校园路线预览</b><span>{{ error }}</span></div>
-        <button type="button" @click="loadRoutes">重试真实服务</button>
+        <button type="button" @click="loadRoutes">重新加载</button>
       </div>
       <section class="route-picker" aria-label="校园路线">
         <button v-for="item in routes" :key="item.id" type="button" :class="{ active: selectedRoute?.id === item.id }" @click="selectRoute(item)">

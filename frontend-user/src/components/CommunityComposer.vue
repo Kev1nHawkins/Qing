@@ -116,7 +116,7 @@ defineExpose({ reset })
       </div>
       <section v-if="selectedCreation" class="creation-preview">
         <MediaImage :src="selectedCreation.output_url" :alt="selectedCreation.title" />
-        <div><strong>{{ selectedCreation.title }}</strong><span>{{ selectedCreation.generationMode || '生成模式未知' }}</span><small>发布时封面由后端根据该作品确定</small></div>
+        <div><strong>{{ selectedCreation.title }}</strong><span>我的创作作品</span><small>这张海报会作为帖子封面</small></div>
       </section>
       <section v-else class="composer-media">
         <span>添加图片（可选）</span>

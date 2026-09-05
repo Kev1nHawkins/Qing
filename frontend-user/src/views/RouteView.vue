@@ -11,7 +11,7 @@ onMounted(async () => {
 </script>
 <template>
   <h1>校园寻迹</h1>
-  <p class="muted">领取路线，在真实校园地标完成文化任务。</p>
+  <p class="muted">沿着校园路线边走边探索，完成有趣的文化任务吧！</p>
   <RouterLink class="button" to="/routes/journey">进入路线任务与积分兑换</RouterLink>
   <p v-if="error" class="status">{{ error }}</p>
   <div class="grid">

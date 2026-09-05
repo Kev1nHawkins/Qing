@@ -156,13 +156,13 @@ function submit() {
 
     <section v-else-if="task.task_type === 'QR_CODE'" class="task-action">
       <h3>{{ task.question || '请输入任务点二维码中的校验内容' }}</h3>
-      <p>二维码内容仅提交给后端校验，页面不会展示正确答案。</p>
+      <p>到达任务点，扫一扫二维码完成打卡 📍</p>
       <input v-model="qrCode" class="task-text-input" maxlength="120" autocomplete="off" placeholder="二维码内容" />
     </section>
 
     <section v-else-if="task.task_type === 'SIMULATED_LOCATION'" class="task-action">
       <h3>{{ task.question || '在任务点附近完成位置打卡' }}</h3>
-      <p>提交时获取一次当前位置，由后端按照 {{ task.radius_meters }} 米范围校验。</p>
+      <p>记得在任务点附近 {{ task.radius_meters }} 米内提交哦。</p>
     </section>
 
     <p v-if="localError" class="task-error">{{ localError }}</p>

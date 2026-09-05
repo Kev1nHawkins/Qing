@@ -188,9 +188,9 @@ onMounted(async () => {
     <header class="community-heading">
       <div>
         <h1>共创社区</h1>
-        <p>看见同学们如何用 AI、行走与真实记录重新表达岭南文化。</p>
+        <p>来看看大家的岭南灵感，也分享你的校园故事吧！🌺</p>
       </div>
-      <a class="community-publish-link" href="#community-composer">发布作品</a>
+      <a class="community-publish-link" href="#community-composer">分享我的作品</a>
     </header>
 
     <nav class="community-filters" aria-label="内容筛选">
@@ -210,7 +210,7 @@ onMounted(async () => {
     <div class="community-layout">
       <section class="community-feed" aria-live="polite">
         <div v-if="loading" class="community-state">
-          <span class="community-loader" />正在收集社区灵感…
+          <span class="community-loader" />正在寻找新鲜灵感…
         </div>
         <div v-else-if="error" class="community-state community-state--error">
           <strong>信息流暂时没有加载成功</strong>
@@ -218,8 +218,8 @@ onMounted(async () => {
           <button type="button" @click="loadPosts">重新加载</button>
         </div>
         <div v-else-if="!posts.length" class="community-state">
-          <strong>这一页还在等待第一份作品</strong>
-          <p>换一个分类看看，或发布你的校园文化记录。</p>
+          <strong>这里还在等你的第一份作品呢！</strong>
+          <p>换个分类逛逛，或者发布一段你的校园文化记录吧。</p>
         </div>
         <template v-else>
           <CommunityPostCard
