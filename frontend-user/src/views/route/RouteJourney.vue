@@ -330,6 +330,14 @@ onBeforeUnmount(() => {
       <div class="journey-stats"><article><strong>{{ routes.length }}</strong><span>校园路线</span></article><article><strong>{{ totalTaskCount }}</strong><span>任务节点</span></article><article><strong>{{ pointsTotal }}</strong><span>我的积分</span></article></div>
     </section>
 
+    <PointsMall
+      :points-total="pointsTotal"
+      :logged-in="isLoggedIn"
+      :point-records="pointRecords"
+      @login="requestLogin()"
+      @redeemed="handleMallRedeemed"
+    />
+
     <div v-if="loading" class="journey-state">正在加载校园路线…</div>
     <div v-else-if="error && !routes.length" class="journey-state error"><b>路线暂时无法加载</b><span>{{ error }}</span><button type="button" @click="loadRoutes">重新加载</button></div>
 
@@ -380,15 +388,6 @@ onBeforeUnmount(() => {
         </aside>
       </section>
 
-      <PointsMall
-        v-if="!serviceFallback"
-        :points-total="pointsTotal"
-        :logged-in="isLoggedIn"
-        :point-records="pointRecords"
-        @login="requestLogin()"
-        @redeemed="handleMallRedeemed"
-      />
-
       <section v-if="selectedRoute" class="journey-footprints">
         <article class="photo-footprints">
           <header><div><p class="m2-kicker">MY PHOTO FOOTPRINTS</p><h2>我的图片足迹</h2></div><span>{{ photoFootprints.length }} 张</span></header>
@@ -426,7 +425,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="achievement-board">
-        <header><div><p class="m2-kicker">POINTS & BADGES</p><h2>积分与文化徽章</h2></div><span>积分流水 {{ pointRecords.length }} 条</span></header>
+        <header><div><p class="m2-kicker">CULTURAL BADGES</p><h2>文化徽章</h2></div><span>积分流水 {{ pointRecords.length }} 条</span></header>
         <div class="badge-grid">
           <article v-for="badge in badges" :key="badge.id" :class="{ owned: ownedBadgeIds.has(badge.id) }">
             <span>{{ ownedBadgeIds.has(badge.id) ? '徽' : '锁' }}</span>

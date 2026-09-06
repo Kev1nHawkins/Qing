@@ -99,8 +99,8 @@ function isRedeemed(product: ShopProduct) {
 function buttonText(product: ShopProduct) {
   if (!props.loggedIn) return '登录后兑换'
   if (isRedeemed(product)) return '已兑换'
-  if (props.pointsTotal < product.points) return `还差 ${product.points - props.pointsTotal} 积分`
-  return `${product.points} 积分兑换`
+  if (props.pointsTotal < product.points) return '积分不足'
+  return '立即兑换'
 }
 
 function openRedemption(product: ShopProduct) {
@@ -168,12 +168,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="points-mall" aria-label="岭潮积分商城">
+  <section class="points-mall" aria-label="积分商店">
     <header class="mall-hero">
       <div class="mall-heading">
         <p>LINGCHAO POINTS MARKET</p>
-        <h2>把每一步校园探索，换成可收藏的文化礼物</h2>
-        <span>数字内容、校园文创、共创权益与文化体验，用寻迹积分真实兑换。</span>
+        <h2>积分商店</h2>
+        <span>完成校园任务、参与文化共创可获得积分。数字内容、校园文创、共创权益与文化体验均可使用积分兑换。</span>
         <div class="mall-view-switch" aria-label="积分商城视图">
           <button type="button" :class="{ active: activeView === 'SHOP' }" @click="activeView = 'SHOP'">兑换商城</button>
           <button type="button" :class="{ active: activeView === 'REDEMPTIONS' }" @click="activeView = 'REDEMPTIONS'">
@@ -182,9 +182,9 @@ onMounted(() => {
         </div>
       </div>
       <div class="points-wallet">
-        <small>我的可用积分</small>
-        <strong>{{ pointsTotal }}</strong>
-        <span>{{ loggedIn ? '完成任务继续累积' : '登录后查看并兑换' }}</span>
+        <small>{{ loggedIn ? '当前积分' : '登录后查看积分' }}</small>
+        <strong>{{ loggedIn ? pointsTotal : '—' }}</strong>
+        <span>{{ loggedIn ? '完成任务继续累积' : '登录后即可兑换奖励' }}</span>
       </div>
       <div class="mall-orbit" aria-hidden="true"><i /><i /><i /><b>兑</b></div>
     </header>
