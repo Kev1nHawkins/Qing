@@ -12,7 +12,7 @@ onMounted(async () => {
 <template>
   <h1>校园寻迹</h1>
   <p class="muted">沿着校园路线边走边探索，完成有趣的文化任务吧！</p>
-  <RouterLink class="button" to="/routes/journey">进入路线任务与积分兑换</RouterLink>
+  <RouterLink class="button" to="/routes/journey">进入路线任务</RouterLink>
   <p v-if="error" class="status">{{ error }}</p>
   <div class="grid">
     <article v-for="route in routes" :key="route.id" class="card">
