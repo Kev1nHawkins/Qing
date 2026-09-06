@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import CulturalTokenReveal from '@/components/CulturalTokenReveal.vue'
 import CampusMap from '@/views/map/CampusMap.vue'
-import PointsMall from '@/views/points/PointsMall.vue'
 import TaskPanel from '@/views/task/TaskPanel.vue'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -20,7 +19,6 @@ import type {
   PointRecord,
   RouteProgress,
   RouteTask,
-  ShopRedeemResult,
   TaskCompleteResult,
   TaskSubmission,
   UserBadge,
@@ -99,15 +97,6 @@ function formatRecordTime(value: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))
-}
-
-async function handleMallRedeemed(result: ShopRedeemResult) {
-  pointsTotal.value = result.pointsTotal
-  if (auth.user) auth.user.points_total = result.pointsTotal
-  toast.value = result.alreadyRedeemed
-    ? `${result.productName}的兑换请求已处理`
-    : `${result.productName}兑换成功，消耗 ${result.cost} 积分`
-  await refreshAccount()
 }
 
 async function loadRoutes() {
@@ -329,14 +318,6 @@ onBeforeUnmount(() => {
       <div><p class="m2-kicker">CAMPUS CULTURE TRAIL</p><h1>校园文化寻迹</h1><p>校园路线连接文化讲解、现场观察、文化问答和多种打卡方式。选择路线后从地图任务点开始探索。</p></div>
       <div class="journey-stats"><article><strong>{{ routes.length }}</strong><span>校园路线</span></article><article><strong>{{ totalTaskCount }}</strong><span>任务节点</span></article><article><strong>{{ pointsTotal }}</strong><span>我的积分</span></article></div>
     </section>
-
-    <PointsMall
-      :points-total="pointsTotal"
-      :logged-in="isLoggedIn"
-      :point-records="pointRecords"
-      @login="requestLogin()"
-      @redeemed="handleMallRedeemed"
-    />
 
     <div v-if="loading" class="journey-state">正在加载校园路线…</div>
     <div v-else-if="error && !routes.length" class="journey-state error"><b>路线暂时无法加载</b><span>{{ error }}</span><button type="button" @click="loadRoutes">重新加载</button></div>
