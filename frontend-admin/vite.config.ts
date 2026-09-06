@@ -10,7 +10,11 @@ export default defineConfig(({ mode }) => {
       port: 5174,
       proxy: {
         '/api': {
-          target: env.VITE_PROXY_TARGET || 'http://localhost:8000',
+          target: env.VITE_PROXY_TARGET || 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+        '/uploads': {
+          target: env.VITE_PROXY_TARGET || 'http://127.0.0.1:8000',
           changeOrigin: true,
         },
       },
@@ -18,4 +22,3 @@ export default defineConfig(({ mode }) => {
     resolve: { alias: { '@': '/src' } },
   }
 })
-

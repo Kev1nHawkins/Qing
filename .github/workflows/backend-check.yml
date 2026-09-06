@@ -1,0 +1,58 @@
+name: Backend checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-static:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      ENVIRONMENT: ci
+      DATABASE_URL: mysql+asyncmy://ci_user:ci_placeholder@127.0.0.1:3306/lingchao_ci
+      JWT_SECRET_KEY: ci-placeholder-not-for-production
+      ADMIN_USERNAME: ci-admin
+      ADMIN_PASSWORD: ci-placeholder-not-for-production
+      LOG_LEVEL: INFO
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Check dependency consistency
+        run: python -m pip check
+
+      - name: Compile Python sources
+        run: python -m compileall -q app alembic tests
+
+      - name: Import FastAPI application
+        run: python -c "from app.main import app; assert app.title"
+
+      - name: Generate and validate OpenAPI schema
+        run: python -c "from app.main import app; schema = app.openapi(); assert schema.get('openapi'); assert '/api/v1/auth/login' in schema['paths']; assert '/health' in schema['paths']"
+
+      - name: Explain validation boundary
+        run: echo "Static import and OpenAPI checks only; real MySQL integration is validated outside this workflow."

@@ -5,7 +5,7 @@ const items = ref<any[]>([])
 const loading = ref(true)
 async function load() {
   loading.value = true
-  try { items.value = (await api.get('/cultures', { params: { pageSize: 100 } })).data.data.items }
+  try { items.value = (await api.get('/admin/cultures', { params: { pageSize: 100 } })).data.data.items }
   finally { loading.value = false }
 }
 onMounted(load)

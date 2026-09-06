@@ -9,6 +9,7 @@ const route = useRoute()
       <div class="logo">岭潮共创<small>ADMIN CONSOLE</small></div>
       <el-menu router background-color="#19221f" text-color="#cdd8d2" active-text-color="#f1b35b">
         <el-menu-item index="/">数据看板</el-menu-item>
+        <el-menu-item index="/users">用户管理</el-menu-item>
         <el-menu-item index="/cultures">文化内容</el-menu-item>
         <el-menu-item index="/routes">路线任务</el-menu-item>
         <el-menu-item index="/templates">AI 模板</el-menu-item>

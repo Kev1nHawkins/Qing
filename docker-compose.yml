@@ -15,7 +15,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -43,11 +43,41 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-120}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:5174}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:-}"
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      DEEPSEEK_TEMPERATURE: "${DEEPSEEK_TEMPERATURE:-0.7}"
+      DEEPSEEK_TIMEOUT_SECONDS: "${DEEPSEEK_TIMEOUT_SECONDS:-30}"
+      IMAGE_GENERATOR_PROVIDER: ${IMAGE_GENERATOR_PROVIDER:-mock}
+      ZHIPU_API_KEY: "${ZHIPU_API_KEY:-}"
+      ZHIPU_BASE_URL: ${ZHIPU_BASE_URL:-https://open.bigmodel.cn/api/paas/v4}
+      ZHIPU_IMAGE_MODEL: ${ZHIPU_IMAGE_MODEL:-cogview-4-250304}
+      ZHIPU_IMAGE_SIZE: ${ZHIPU_IMAGE_SIZE:-768x1344}
+      ZHIPU_IMAGE_QUALITY: ${ZHIPU_IMAGE_QUALITY:-standard}
+      ZHIPU_IMAGE_WATERMARK_ENABLED: "${ZHIPU_IMAGE_WATERMARK_ENABLED:-true}"
+      ZHIPU_IMAGE_TIMEOUT_SECONDS: "${ZHIPU_IMAGE_TIMEOUT_SECONDS:-90}"
+      ZHIPU_IMAGE_MAX_RETRIES: "${ZHIPU_IMAGE_MAX_RETRIES:-2}"
+      ZHIPU_IMAGE_RETRY_DELAY_SECONDS: "${ZHIPU_IMAGE_RETRY_DELAY_SECONDS:-1}"
+      EMBEDDING_MODEL_NAME: ${EMBEDDING_MODEL_NAME:-BAAI/bge-small-zh-v1.5}
+      EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-cpu}
+      EMBEDDING_CACHE_DIR: ${EMBEDDING_CACHE_DIR:-/app/work/model-cache}
+      RAG_KNOWLEDGE_DIR: ${RAG_KNOWLEDGE_DIR:-/app/data/knowledge_base}
+      RAG_PROMPT_PATH: ${RAG_PROMPT_PATH:-/app/data/prompts/rag_chat.txt}
+      IMAGE_PROMPT_PATH: ${IMAGE_PROMPT_PATH:-/app/data/prompts/image_prompt.txt}
+      RAG_VECTOR_STORE_DIR: ${RAG_VECTOR_STORE_DIR:-/app/work/chroma}
+      RAG_COLLECTION_NAME: ${RAG_COLLECTION_NAME:-lingnan_knowledge}
+      RAG_TOP_K: "${RAG_TOP_K:-5}"
+      RAG_MIN_SCORE: "${RAG_MIN_SCORE:-0.45}"
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      # AI knowledge base and prompt templates.
+      - ./data:/app/data:ro
+      # Community demo seed resolves repository data from /data.
+      - ./data:/data:ro
       - uploads_data:/app/uploads
     depends_on:
       mysql:
@@ -68,6 +98,8 @@ services:
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
       VITE_PROXY_TARGET: http://backend:8000
+      VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+      VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
     ports:
       - "5173:5173"
     volumes:
@@ -106,4 +138,3 @@ volumes:
   uploads_data:
   frontend_user_node_modules:
   frontend_admin_node_modules:
-

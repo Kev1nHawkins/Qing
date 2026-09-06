@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -6,9 +6,17 @@ from app.api.dependencies import AdminUser, CurrentUser, DbSession
 from app.api.helpers import apply_changes, get_or_404, paginated
 from app.core.response import success
 from app.models.route import Route, RouteTask, UserTaskRecord
+from app.models.user import User
 from app.schemas.route import RouteCreate, RouteRead, RouteUpdate, TaskRead
 
 router = APIRouter(prefix="/routes", tags=["Route"])
+
+
+def evidence_asset_id(answer: str | None) -> int | None:
+    if not answer or not answer.startswith("ASSET:"):
+        return None
+    value = answer.removeprefix("ASSET:")
+    return int(value) if value.isdigit() else None
 
 
 @router.get("", summary="寻迹路线列表")
@@ -20,8 +28,8 @@ async def list_routes(
     return success(
         await paginated(
             db,
-            stmt=select(Route).order_by(Route.id),
-            count_stmt=select(func.count(Route.id)),
+            stmt=select(Route).where(Route.status == "PUBLISHED").order_by(Route.id),
+            count_stmt=select(func.count(Route.id)).where(Route.status == "PUBLISHED"),
             page=page,
             page_size=page_size,
             schema=RouteRead,
@@ -32,20 +40,90 @@ async def list_routes(
 @router.get("/{route_id}", summary="寻迹路线详情及任务")
 async def get_route(route_id: int, db: DbSession) -> dict:
     route = await db.scalar(
-        select(Route).options(selectinload(Route.tasks)).where(Route.id == route_id)
+        select(Route)
+        .options(selectinload(Route.tasks))
+        .where(Route.id == route_id, Route.status == "PUBLISHED")
     )
     if not route:
-        return await get_or_404(db, Route, route_id, "寻迹路线")
+        raise HTTPException(status_code=404, detail="寻迹路线不存在或尚未发布")
     data = RouteRead.model_validate(route).model_dump()
     data["tasks"] = [TaskRead.model_validate(task).model_dump() for task in route.tasks]
     return success(data)
+
+
+@router.get("/{route_id}/progress", summary="我的路线进度")
+async def get_route_progress(
+    route_id: int, db: DbSession, current_user: CurrentUser
+) -> dict:
+    route = await db.scalar(
+        select(Route).where(Route.id == route_id, Route.status == "PUBLISHED")
+    )
+    if not route:
+        raise HTTPException(status_code=404, detail="寻迹路线不存在或尚未发布")
+    tasks = (
+        await db.scalars(
+            select(RouteTask)
+            .where(RouteTask.route_id == route_id)
+            .order_by(RouteTask.order_no)
+        )
+    ).all()
+    task_ids = [task.id for task in tasks]
+    records = []
+    if task_ids:
+        records = list(
+            (
+                await db.scalars(
+                    select(UserTaskRecord)
+                    .where(
+                        UserTaskRecord.user_id == current_user.id,
+                        UserTaskRecord.task_id.in_(task_ids),
+                    )
+                    .order_by(UserTaskRecord.task_id)
+                )
+            ).all()
+        )
+    completed_ids = [
+        record.task_id for record in records if record.status == "COMPLETED"
+    ]
+    total = len(tasks)
+    completed = len(completed_ids)
+    return success(
+        {
+            "routeId": route_id,
+            "started": bool(records),
+            "totalTasks": total,
+            "completedTasks": completed,
+            "progressPercent": round(completed * 100 / total) if total else 0,
+            "completedTaskIds": completed_ids,
+            "records": [
+                {
+                    "recordId": record.id,
+                    "taskId": record.task_id,
+                    "status": record.status,
+                    "awardedPoints": record.awarded_points,
+                    "completedAt": record.completed_at,
+                    "evidenceAssetId": evidence_asset_id(record.answer),
+                }
+                for record in records
+            ],
+        }
+    )
 
 
 @router.post("/{route_id}/start", summary="开始路线（幂等）")
 async def start_route(
     route_id: int, db: DbSession, current_user: CurrentUser
 ) -> dict:
-    await get_or_404(db, Route, route_id, "寻迹路线")
+    route = await db.scalar(
+        select(Route).where(Route.id == route_id, Route.status == "PUBLISHED")
+    )
+    if not route:
+        raise HTTPException(status_code=404, detail="寻迹路线不存在或尚未发布")
+    locked_user = await db.scalar(
+        select(User).where(User.id == current_user.id).with_for_update()
+    )
+    if not locked_user:
+        raise HTTPException(status_code=401, detail="用户不存在")
     first_task = await db.scalar(
         select(RouteTask)
         .where(RouteTask.route_id == route_id)

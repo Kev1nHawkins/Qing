@@ -16,6 +16,11 @@ class PointRead(Timestamped):
     description: str
 
 
+class PointRedeemRequest(BaseModel):
+    product_code: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{0,79}$")
+    redemption_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$")
+
+
 class BadgeCreate(BaseModel):
     code: str = Field(min_length=1, max_length=80)
     name: str = Field(min_length=1, max_length=80)
@@ -49,4 +54,3 @@ class AdminPostReview(BaseModel):
 class AdminPointAdjust(BaseModel):
     amount: int = Field(ge=-10000, le=10000)
     description: str = Field(min_length=1, max_length=255)
-

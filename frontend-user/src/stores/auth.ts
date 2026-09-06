@@ -9,14 +9,35 @@ interface User {
   points_total: number
 }
 
+interface RegisterPayload {
+  username: string
+  email?: string
+  password: string
+  nickname: string
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const isLoggedIn = computed(() => Boolean(localStorage.getItem('accessToken')))
+  const token = ref(localStorage.getItem('accessToken') || '')
+  const isLoggedIn = computed(() => Boolean(token.value))
+
+  function applySession(accessToken: string, sessionUser: User) {
+    localStorage.setItem('accessToken', accessToken)
+    token.value = accessToken
+    user.value = sessionUser
+  }
 
   async function login(username: string, password: string) {
     const { data } = await api.post('/auth/login', { username, password })
-    localStorage.setItem('accessToken', data.data.access_token)
-    user.value = data.data.user
+    applySession(data.data.access_token, data.data.user)
+  }
+
+  async function register(payload: RegisterPayload) {
+    const { data } = await api.post('/auth/register', {
+      ...payload,
+      email: payload.email || null,
+    })
+    applySession(data.data.access_token, data.data.user)
   }
 
   async function fetchMe() {
@@ -26,9 +47,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   function logout() {
     localStorage.removeItem('accessToken')
+    token.value = ''
     user.value = null
   }
 
-  return { user, isLoggedIn, login, fetchMe, logout }
+  return { user, isLoggedIn, login, register, fetchMe, logout }
 })
-

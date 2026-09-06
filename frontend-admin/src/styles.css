@@ -13,3 +13,15 @@ body { margin: 0; background: #f4f6f4; }
 .login-card { width: min(420px, calc(100vw - 40px)); padding: 36px; border-radius: 18px; background: #fff; }
 .login-card h1 { margin-top: 0; }
 
+@media (max-width: 680px) {
+  .layout { display: block; }
+  .sidebar { width: 100% !important; }
+  .logo { padding: 14px 16px 10px; font-size: 17px; }
+  .logo small { display: inline; margin: 0 0 0 8px; }
+  .sidebar .el-menu { display: flex; overflow-x: auto; border-right: 0; }
+  .sidebar .el-menu-item { flex: 0 0 auto; height: 44px; padding: 0 14px; line-height: 44px; }
+  .layout > .el-container { min-width: 0; }
+  .header { height: auto; min-height: 44px; padding: 10px 16px; font-size: 12px; }
+  .el-main { padding: 16px; }
+}
+

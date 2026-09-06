@@ -1,0 +1,56 @@
+name: Frontend checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Set up Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Confirm exact build-script allowlist
+        shell: bash
+        run: |
+          grep -Fx "  esbuild: true" pnpm-workspace.yaml
+          grep -Fx "  vue-demi: true" pnpm-workspace.yaml
+
+      - name: Type-check user frontend
+        run: pnpm --dir frontend-user exec vue-tsc --noEmit
+
+      - name: Build user frontend
+        run: pnpm --dir frontend-user run build
+
+      - name: Type-check admin frontend
+        run: pnpm --dir frontend-admin exec vue-tsc --noEmit
+
+      - name: Build admin frontend
+        run: pnpm --dir frontend-admin run build

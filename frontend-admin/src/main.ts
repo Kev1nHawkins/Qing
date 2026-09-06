@@ -6,5 +6,6 @@ import App from './App.vue'
 import router from './router'
 import './styles.css'
 
-createApp(App).use(createPinia()).use(router).use(ElementPlus).mount('#app')
+const app = createApp(App).use(createPinia()).use(router).use(ElementPlus)
+router.isReady().then(() => app.mount('#app'))
 
