@@ -14,6 +14,7 @@ from app.models.points import Badge
 from app.models.route import Route, RouteTask
 from app.models.user import Role, User
 from app.services.creation.system_templates import SYSTEM_FREE_IMAGE_TEMPLATE_CODE
+from app.services.points import evaluate_badges
 
 
 async def ensure_roles(session) -> dict[str, Role]:
@@ -49,9 +50,45 @@ async def ensure_admin(session, role: Role) -> User:
 
 async def ensure_badges(session) -> None:
     badge_specs = [
-        ("kapok-first", "红棉初见", "完成首个红棉寻迹任务", BadgeRuleType.TASK_COUNT, 1),
-        ("culture-walker", "文化行者", "累计完成 3 个寻迹任务", BadgeRuleType.TASK_COUNT, 3),
-        ("tide-creator", "岭潮共创者", "累计获得 50 积分", BadgeRuleType.POINT_TOTAL, 50),
+        ("kapok-first", "红棉初见", "迈出校园寻迹第一步，让第一枚红棉印记成为你的文化旅程起点", BadgeRuleType.TASK_COUNT, 1),
+        ("culture-walker", "文化行者", "走过 3 处文化地标，把课堂之外的岭南故事收入自己的校园记忆", BadgeRuleType.TASK_COUNT, 3),
+        (
+            "five-token-keeper",
+            "五印集章家",
+            "集齐红棉路线 5 枚文化印记，解锁一套属于你的校园寻迹收藏",
+            BadgeRuleType.TASK_COUNT,
+            5,
+        ),
+        (
+            "campus-pathfinder",
+            "校园寻踪者",
+            "完成 8 次文化探索，从跟随路线进阶为能发现校园故事的寻踪者",
+            BadgeRuleType.TASK_COUNT,
+            8,
+        ),
+        (
+            "route-master",
+            "岭潮路线大师",
+            "完成全部 11 个校园寻迹任务，以完整足迹加冕岭潮路线大师",
+            BadgeRuleType.TASK_COUNT,
+            11,
+        ),
+        ("culture-sprout", "拾光新芽", "积攒 25 分文化能量，点亮第一份可兑换、可收藏的探索成果", BadgeRuleType.POINT_TOTAL, 25),
+        ("tide-creator", "岭潮共创者", "持有 50 分文化积分，让每次寻迹都转化为下一次共创的灵感", BadgeRuleType.POINT_TOTAL, 50),
+        (
+            "heritage-guardian",
+            "文化守护人",
+            "持有 100 分文化积分，用持续参与守护并分享值得被看见的岭南故事",
+            BadgeRuleType.POINT_TOTAL,
+            100,
+        ),
+        (
+            "kapok-ambassador",
+            "红棉传播使",
+            "持有 150 分文化积分，成为连接校园探索、文化共创与青年传播的红棉使者",
+            BadgeRuleType.POINT_TOTAL,
+            150,
+        ),
     ]
     for code, name, description, rule_type, rule_value in badge_specs:
         badge = await session.scalar(select(Badge).where(Badge.code == code))
@@ -71,6 +108,12 @@ async def ensure_badges(session) -> None:
             badge.rule_type = rule_type.value
             badge.rule_value = rule_value
             badge.is_active = True
+
+
+async def sync_existing_user_badges(session) -> None:
+    users = (await session.scalars(select(User).where(User.is_active.is_(True)))).all()
+    for user in users:
+        await evaluate_badges(session, user)
 
 
 async def ensure_demo_routes(session, admin: User) -> None:
@@ -113,12 +156,12 @@ async def ensure_demo_routes(session, admin: User) -> None:
         ("何世杰体育馆广场", "何世杰体育馆正门广场", "连接广州亚运会、全运会与校园体育精神的打卡点", "23.0436550", "113.3704310"),
         ("校史馆门口", "广州大学校史馆门口", "从校史出发认识广州十三行与海上商都记忆", "23.0399440", "113.3706840"),
         ("红色长廊", "广州大学红色文化长廊", "了解广州革命先烈与青年担当的文化打卡点", "23.0384840", "113.3687460"),
-        ("岭南建筑连廊", "教学区连廊", "观察通风、遮阳与灰空间", "23.0382000", "113.3720000"),
-        ("德信亭", "广州大学大学城校区", "传统亭廊与当代校园景观", "23.0369000", "113.3725000"),
-        ("教学楼中庭", "教学区中庭", "岭南建筑气候适应任务点", "23.0363000", "113.3716000"),
-        ("中心湖东岸", "广州大学中心湖东岸", "观察水体与校园生态", "23.0356000", "113.3708000"),
-        ("湖畔栈道", "广州大学湖畔步道", "校园自然摄影任务点", "23.0349000", "113.3697000"),
-        ("学生广场", "广州大学学生广场", "路线总结与文化问答点", "23.0354000", "113.3684000"),
+        ("桂花岗校区南门", "桂花岗校区入口", "从老城街区进入校园，观察校区与城市的连接", "23.1513000", "113.2618000"),
+        ("桂花岗校史记忆廊", "桂花岗校区校园中轴", "梳理校区发展记忆与城市教育脉络", "23.1518500", "113.2623500"),
+        ("桂花岗教学主楼", "桂花岗校区教学区", "观察岭南建筑的门廊、窗格与遮阳设计", "23.1523500", "113.2619000"),
+        ("黄埔校区南门", "黄埔校区入口", "从校区入口认识创新校区的开放气质", "23.1710000", "113.4895000"),
+        ("黄埔研究院", "黄埔校区研究院", "连接研究生教育、产业实践与科技传播", "23.1715500", "113.4902000"),
+        ("黄埔创新实验中心", "黄埔校区创新实验区", "观察科研协作与产学研共创的校园场景", "23.1720500", "113.4897500"),
     ]
     locations: dict[str, Location] = {}
     for name, address, description, latitude, longitude in location_specs:
@@ -144,9 +187,9 @@ async def ensure_demo_routes(session, admin: User) -> None:
 
     route_specs = [
         {
-            "title": "红棉寻迹",
+            "title": "大学城校区·红棉寻迹",
             "slug": "kapok-trail",
-            "summary": "沿校园文化地标寻找木棉印记，在行走、观察和问答中认识广州城市精神。",
+            "summary": "从大学城校区正门、图书馆到红色长廊，沿着木棉与校园地标认识广州城市精神。",
             "duration": 55,
             "distance": "2.40",
             "tasks": [
@@ -158,27 +201,27 @@ async def ensure_demo_routes(session, admin: User) -> None:
             ],
         },
         {
-            "title": "建筑寻纹",
+            "title": "桂花岗校区·老城寻忆",
             "slug": "architecture-trail",
-            "summary": "从门廊、窗格与庭院中寻找岭南建筑适应气候、连接生活的设计智慧。",
+            "summary": "从桂花岗校区南门走向教学主楼，在老城街区与校园记忆间发现岭南建筑智慧。",
             "duration": 45,
             "distance": "1.80",
             "tasks": [
-                ("岭南建筑连廊", "连廊观察", "观察校园连廊的遮阳设计并拍摄建筑细节。", TaskType.CHECK_IN, "请上传连廊遮阳或通风设计照片", None, None, 10, 100),
-                ("德信亭", "亭廊问答", "辨认岭南建筑中连接室内外的过渡空间。", TaskType.QUIZ, "岭南建筑中兼具遮阳和交通功能的空间是什么？", ["骑楼或连廊", "封闭地下室", "玻璃幕墙"], "骑楼或连廊", 15, 100),
-                ("教学楼中庭", "中庭光影", "观察中庭的采光、通风与公共活动空间。", TaskType.CHECK_IN, "请上传教学楼中庭现场照片", None, None, 20, 100),
+                ("桂花岗校区南门", "老城入校", "从校区南门拍摄入口与周边街区的交界，记录校园嵌入城市的第一印象。", TaskType.CHECK_IN, "请上传包含桂花岗校区入口或校名标识的现场照片", None, None, 10, 120),
+                ("桂花岗校史记忆廊", "校史记忆问答", "在校史记忆廊梳理校区与广州城市教育发展的联系。", TaskType.QUIZ, "校园文化空间最重要的价值是什么？", ["保存记忆并连接当下", "只作装饰", "完全封闭使用"], "保存记忆并连接当下", 15, 100),
+                ("桂花岗教学主楼", "门廊光影", "观察教学主楼的门廊、窗格与遮阳细节，发现岭南建筑对气候的回应。", TaskType.CHECK_IN, "请上传教学主楼门廊、窗格或遮阳细节照片", None, None, 20, 100),
             ],
         },
         {
-            "title": "湖畔拾光",
+            "title": "黄埔校区·科创寻新",
             "slug": "lakeside-trail",
-            "summary": "沿湖连接自然景观、校园记忆与公共生活，用照片记录一段可分享的广大时光。",
+            "summary": "从黄埔校区入口走进研究院与创新实验区，记录研究生教育和产学研共创的未来场景。",
             "duration": 50,
             "distance": "2.10",
             "tasks": [
-                ("中心湖东岸", "湖岸观察", "观察校园水体与公共空间并记录湖岸景观。", TaskType.CHECK_IN, "请上传中心湖东岸现场照片", None, None, 10, 120),
-                ("湖畔栈道", "湖畔影像", "拍摄湖畔植物、步道或同学活动的现场照片。", TaskType.CHECK_IN, "请上传湖畔现场照片完成图片打卡", None, None, 15, 100),
-                ("学生广场", "生态共生问答", "完成路线总结，选择校园景观设计应遵循的原则。", TaskType.QUIZ, "校园生态景观最应优先尊重什么？", ["自然与人的共生", "只追求装饰效果", "完全隔离公共活动"], "自然与人的共生", 15, 100),
+                ("黄埔校区南门", "创新启程", "从黄埔校区入口出发，拍摄体现开放、创新气质的校区第一视角。", TaskType.CHECK_IN, "请上传包含黄埔校区入口或校名标识的现场照片", None, None, 10, 120),
+                ("黄埔研究院", "科研场景观察", "观察研究院与公共交流空间，记录科技研究如何连接真实问题。", TaskType.CHECK_IN, "请上传黄埔研究院建筑或公共交流空间的现场照片", None, None, 15, 100),
+                ("黄埔创新实验中心", "产学研共创问答", "在创新实验区完成路线总结，理解校园科研与产业实践的协作方式。", TaskType.QUIZ, "产学研共创最关键的连接方式是什么？", ["开放协作与成果转化", "各自封闭进行", "只关注单一技术"], "开放协作与成果转化", 15, 100),
             ],
         },
     ]
@@ -326,6 +369,7 @@ async def main() -> None:
         admin = await ensure_admin(session, roles["admin"])
         await ensure_badges(session)
         await ensure_demo_routes(session, admin)
+        await sync_existing_user_badges(session)
         await session.commit()
     print("Seed data is ready.")
 

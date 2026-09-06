@@ -8,7 +8,7 @@ defineProps<{
   name: string
   identity: string
   description: string
-  tags: string[]
+  tags?: string[]
   status?: string
   interactive?: boolean
 }>()
@@ -57,7 +57,7 @@ defineEmits<{ select: [] }>()
       <h3>{{ name }}</h3>
       <strong>{{ identity }}</strong>
       <p>{{ description }}</p>
-      <div><span v-for="tag in tags" :key="tag">{{ tag }}</span></div>
+      <div v-if="tags?.length"><span v-for="tag in tags" :key="tag">{{ tag }}</span></div>
     </div>
   </component>
 </template>

@@ -48,9 +48,9 @@ export const demoRouteFallback: { routes: CultureRoute[]; locations: Location[] 
   locations,
   routes: [{
     id: -1,
-    title: '红棉寻迹',
+    title: '大学城校区·红棉寻迹',
     slug: 'kapok-trail-offline-preview',
-    summary: '大学城校区文化路线离线预览；恢复 MySQL 后可领取路线、提交任务和获得积分。',
+    summary: '从大学城校区正门、图书馆到红色长廊的文化路线离线预览；恢复 MySQL 后可领取路线、提交任务和获得积分。',
     cover_image_url: null,
     duration_minutes: 90,
     distance_km: '2.4',
