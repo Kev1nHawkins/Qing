@@ -7,7 +7,7 @@ const router = createRouter({
     { path: '/', component: HomeView, meta: { immersive: true } },
     { path: '/cultures', component: () => import('@/views/CultureView.vue'), meta: { immersive: true } },
     { path: '/guide', component: () => import('@/views/GuideView.vue'), meta: { immersive: true } },
-    { path: '/routes', component: () => import('@/views/RouteView.vue') },
+    { path: '/routes', redirect: { path: '/routes/journey', query: { routeId: '1' } } },
     {
       path: '/routes/journey',
       component: () => import('@/views/route/RouteJourney.vue'),

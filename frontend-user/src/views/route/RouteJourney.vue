@@ -48,7 +48,14 @@ const evidenceUrls = ref<Record<number, string>>({})
 const serviceFallback = ref(false)
 
 const isLoggedIn = computed(() => auth.isLoggedIn)
-const selectedRoute = computed(() => routes.value.find(item => item.id === selectedRouteId.value) || routes.value[0])
+const selectedRoute = computed(() => {
+  // The campus cards open this view with routeId. Resolve it directly from the
+  // URL so the intended route remains selected even while account data loads.
+  const routeId = new URLSearchParams(window.location.search).get('routeId')
+  return routes.value.find(item => String(item.id) === routeId)
+    || routes.value.find(item => String(item.id) === String(selectedRouteId.value))
+    || routes.value[0]
+})
 const selectedProgress = computed(() => selectedRoute.value ? progress.value[selectedRoute.value.id] : undefined)
 const completedTaskIds = computed(() => selectedProgress.value?.completedTaskIds || [])
 const activeTask = computed(() => selectedRoute.value?.tasks?.find(task => task.id === activeTaskId.value))
@@ -110,6 +117,13 @@ async function handleMallRedeemed(result: ShopRedeemResult) {
   await refreshAccount()
 }
 
+function selectRouteFromQuery() {
+  const routeId = new URLSearchParams(window.location.search).get('routeId')
+  const route = routes.value.find(item => String(item.id) === routeId)
+  if (route) selectedRouteId.value = route.id
+  return Boolean(route)
+}
+
 async function loadRoutes() {
   loading.value = true
   error.value = ''
@@ -128,7 +142,9 @@ async function loadRoutes() {
     )
     locations.value = locationResponse.data.data.items
     badges.value = badgeResponse.data.data
-    if (!selectedRouteId.value && routes.value[0]) selectedRouteId.value = routes.value[0].id
+    if (!selectRouteFromQuery() && !selectedRouteId.value && routes.value[0]) {
+      selectedRouteId.value = routes.value[0].id
+    }
     await refreshAccount()
   } catch (event) {
     routes.value = demoRouteFallback.routes
@@ -189,8 +205,9 @@ async function refreshAccount() {
 }
 
 function selectRoute(route: CultureRoute) {
-  selectedRouteId.value = route.id
-  activeTaskId.value = undefined
+  // Use a full navigation rather than only local selection so each route card
+  // is shareable and remains reliable when another layer intercepts click.
+  window.location.assign(`/routes/journey?routeId=${route.id}`)
 }
 
 function selectTask(task: RouteTask) {
@@ -317,7 +334,10 @@ watch(selectedRoute, route => {
   if (!route) return
   activeTaskId.value = undefined
 }, { immediate: true })
-onMounted(loadRoutes)
+onMounted(async () => {
+  await loadRoutes()
+  selectRouteFromQuery()
+})
 onBeforeUnmount(() => {
   Object.values(evidenceUrls.value).forEach(url => URL.revokeObjectURL(url))
 })
@@ -339,7 +359,7 @@ onBeforeUnmount(() => {
         <button type="button" @click="loadRoutes">重新加载</button>
       </div>
       <section class="route-picker" aria-label="校园路线">
-        <button v-for="item in routes" :key="item.id" type="button" :class="{ active: selectedRoute?.id === item.id }" @click="selectRoute(item)">
+        <button v-for="item in routes" :key="item.id" type="button" :class="{ active: selectedRoute?.id === item.id }" @pointerdown="selectRoute(item)">
           <span>{{ String(routes.indexOf(item) + 1).padStart(2, '0') }}</span>
           <div><small>{{ item.distance_km }} KM · {{ item.duration_minutes }} MIN</small><h2>{{ item.title }}</h2><p>{{ item.summary }}</p></div>
           <footer><b>{{ item.tasks?.length || 0 }} 个节点</b><em>{{ progress[item.id]?.progressPercent || 0 }}%</em></footer>

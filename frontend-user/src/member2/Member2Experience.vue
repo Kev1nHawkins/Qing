@@ -111,7 +111,9 @@ function navigate(next: ViewName) {
   window.history.replaceState(null, '', url)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-function openUniversityCampus() { window.location.assign('/routes') }
+function openCampusRoute(routeId: number) {
+  window.location.assign(`/routes/journey?routeId=${routeId}`)
+}
 function openCulture(item: Culture) { selected.value = item; navigate('detail') }
 async function ask(text?: string) {
   const content = (text || question.value).trim()
@@ -212,9 +214,9 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
         <section class="m2-section m2-campus-personalities">
           <div class="m2-section-head"><div><p class="m2-kicker">THREE CAMPUSES · ONE GZHU</p><h2>三种校园气质，一张广大文化地图</h2></div><img :src="gzuOfficialLogo" alt="广州大学" /></div>
           <div class="m2-campus-card-grid">
-            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、何世杰体育馆、校史馆和红色长廊为节点，连接学习、体育、商都记忆与红色文化。" :tags="['红棉寻迹','校园地标','学生共创']" status="进入寻迹" interactive @select="openUniversityCampus" />
-            <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" :tags="['校史记忆','老城文脉','社区连接']" status="尚未开放" />
-            <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" :tags="['黄埔研究院','科技创新','产学研共创']" status="尚未开放" />
+            <CampusSceneCard variant="university" index="01" eyebrow="MAIN CAMPUS" name="大学城校区" identity="综合校园 · 青春共同体" description="以正门、图书馆、何世杰体育馆、校史馆和红色长廊为节点，连接学习、体育、商都记忆与红色文化。" status="进入寻迹" interactive @select="openCampusRoute(1)" />
+            <CampusSceneCard variant="guihuagang" index="02" eyebrow="URBAN MEMORY" name="桂花岗校区" identity="城市文脉 · 校园记忆" description="身处广州中心城区，让校园历史与城市街区相互映照，延展校史、建筑和社区文化主题。" status="进入寻迹" interactive @select="openCampusRoute(2)" />
+            <CampusSceneCard variant="huangpu" index="03" eyebrow="FUTURE INNOVATION" name="黄埔校区" identity="科创引擎 · 研究生教育" description="连接黄埔研究院、研究生院与区域创新实践，为 AI、科技传播和产学研共创提供未来场景。" status="进入寻迹" interactive @select="openCampusRoute(3)" />
           </div>
         </section>
 
