@@ -8,6 +8,8 @@ import CampusSceneCard from '@/components/CampusSceneCard.vue'
 import CreativeWorkbench from '@/components/CreativeWorkbench.vue'
 import { cultureVisual, visuals } from '@/data/visuals'
 import gzuOfficialLogo from '@/assets/culture/gzu-official-logo.png'
+import kapokCultureImage from '@/assets/culture/广大木棉花.jpg'
+import threeCampusMapImage from '@/assets/culture/三校区小地图.jpg'
 import type { Badge, CreationTemplate, Culture, CultureRoute, PageData, Post } from '@/types'
 
 type ViewName = 'home' | 'cultures' | 'detail' | 'guide' | 'create' | 'profile'
@@ -258,7 +260,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
         </section>
 
         <section class="m2-section m2-campus-band">
-          <div class="m2-campus-photo"><MediaImage :src="visuals.pavilion" alt="广州大学大学城校区校园实景" /></div>
+          <div class="m2-campus-photo"><MediaImage :src="threeCampusMapImage" alt="广州大学三校区地图" /></div>
           <div class="m2-campus-copy"><p class="m2-kicker">THREE CAMPUSES · ONE GZHU</p><h2>大学城、桂花岗、黄埔</h2><p>三个校区拥有不同的空间记忆与学科气质，共同组成广州大学的校园文化地图。当前红棉寻迹以大学城校区为示范，后续可把桂花岗的城市文脉与黄埔的创新实践接入同一平台。</p><div class="m2-campus-pills"><span>大学城校区</span><span>桂花岗校区</span><span>黄埔校区</span></div><button class="m2-link" @click="navigate('cultures')">查看三校区文化条目 →</button></div>
         </section>
 
@@ -266,7 +268,7 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
           <div class="m2-section-head"><div><p class="m2-kicker">FEATURED STORIES</p><h2>从这些岭南故事开始</h2></div><button class="m2-link" @click="navigate('cultures')">查看全部 →</button></div>
           <PageState :loading="loading" :error="error" :empty="!loading && !error && cultures.length === 0" @retry="loadCultures" />
           <div v-if="!loading && cultures.length" class="m2-card-grid">
-            <button v-for="(item,index) in cultures.slice(0,3)" :key="item.id" class="m2-card" @click="openCulture(item)"><div class="m2-card-photo"><MediaImage :src="item.cover_image_url || cultureVisual(item.category,index)" :alt="item.title" /></div><div class="m2-card-body"><span>{{ item.category }}</span><h3>{{ item.title }}</h3><p>{{ item.summary }}</p></div></button>
+            <button v-for="(item,index) in cultures.slice(0,3)" :key="item.id" class="m2-card" @click="openCulture(item)"><div class="m2-card-photo"><MediaImage :src="index === 0 ? kapokCultureImage : (item.cover_image_url || cultureVisual(item.category,index))" :alt="item.title" /></div><div class="m2-card-body"><span>{{ item.category }}</span><h3>{{ item.title }}</h3><p>{{ item.summary }}</p></div></button>
           </div>
         </section>
       </template>
