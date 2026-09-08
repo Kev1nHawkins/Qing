@@ -4,7 +4,7 @@ from app.models.creation import AICreation, CreationTemplate
 from app.models.culture import CultureItem, Location
 from app.models.points import Badge, PointRecord, UserBadge
 from app.models.route import Route, RouteTask, UserTaskRecord
-from app.models.user import FileAsset, Role, User
+from app.models.user import FileAsset, PhoneVerificationChallenge, Role, User
 
 __all__ = [
     "AICreation",
@@ -17,6 +17,7 @@ __all__ = [
     "FileAsset",
     "Location",
     "PointRecord",
+    "PhoneVerificationChallenge",
     "Post",
     "PostLike",
     "PostTag",

@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "dev-secret-change-before-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
+    phone_verification_provider: str = "mock"
+    phone_code_expire_seconds: int = 600
+    phone_code_resend_seconds: int = 60
+    phone_code_hourly_limit: int = 5
+    phone_code_max_attempts: int = 5
     admin_username: str = "admin"
     admin_password: str = "Admin123!"
     llm_provider: str = "mock"
