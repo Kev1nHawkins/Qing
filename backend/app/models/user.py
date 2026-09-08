@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, IdMixin, TimestampMixin
@@ -19,12 +21,14 @@ class User(Base, IdMixin, TimestampMixin):
 
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     nickname: Mapped[str] = mapped_column(String(64))
     avatar_url: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     points_total: Mapped[int] = mapped_column(default=0)
+    auth_version: Mapped[int] = mapped_column(default=0)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), index=True)
 
     role: Mapped["Role"] = relationship(back_populates="users", lazy="joined")
@@ -33,6 +37,19 @@ class User(Base, IdMixin, TimestampMixin):
     posts: Mapped[list["Post"]] = relationship(back_populates="author")
     point_records: Mapped[list["PointRecord"]] = relationship(back_populates="user")
     badges: Mapped[list["UserBadge"]] = relationship(back_populates="user")
+
+
+class PhoneVerificationChallenge(Base, TimestampMixin):
+    __tablename__ = "phone_verification_challenges"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    purpose: Mapped[str] = mapped_column(String(32), index=True)
+    phone_hash: Mapped[str] = mapped_column(String(64), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    failed_attempts: Mapped[int] = mapped_column(default=0)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class FileAsset(Base, IdMixin, TimestampMixin):

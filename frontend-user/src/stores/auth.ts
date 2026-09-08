@@ -7,6 +7,7 @@ interface User {
   username: string
   nickname: string
   points_total: number
+  phone: string | null
 }
 
 interface RegisterPayload {
@@ -14,6 +15,9 @@ interface RegisterPayload {
   email?: string
   password: string
   nickname: string
+  phone?: string
+  phoneChallengeId?: string
+  phoneCode?: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -45,11 +49,15 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = data.data
   }
 
+  function updateUser(sessionUser: User) {
+    user.value = sessionUser
+  }
+
   function logout() {
     localStorage.removeItem('accessToken')
     token.value = ''
     user.value = null
   }
 
-  return { user, isLoggedIn, login, register, fetchMe, logout }
+  return { user, isLoggedIn, login, register, fetchMe, updateUser, logout }
 })

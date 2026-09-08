@@ -32,6 +32,12 @@ async def get_current_user(
     user = await db.scalar(select(User).where(User.id == user_id))
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="用户不存在或已停用")
+    if int(payload.get("ver", 0)) != user.auth_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="登录状态无效或已过期",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 

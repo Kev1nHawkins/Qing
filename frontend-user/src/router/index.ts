@@ -26,6 +26,7 @@ const router = createRouter({
     { path: '/profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/login', component: () => import('@/views/LoginView.vue') },
     { path: '/register', component: () => import('@/views/RegisterView.vue') },
+    { path: '/forgot-password', component: () => import('@/views/ForgotPasswordView.vue') },
   ],
 })
 
@@ -34,7 +35,10 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !loggedIn) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
-  if ((to.path === '/login' || to.path === '/register') && loggedIn) return '/'
+  if (
+    (to.path === '/login' || to.path === '/register' || to.path === '/forgot-password')
+    && loggedIn
+  ) return '/'
 })
 
 export default router
