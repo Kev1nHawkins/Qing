@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -10,12 +11,35 @@ const form = reactive({
   username: '',
   nickname: '',
   email: '',
+  phone: '',
+  verificationCode: '',
   password: '',
   confirmPassword: '',
   agreed: false,
 })
 const submitting = ref(false)
+const sending = ref(false)
+const demoCode = ref('')
 const error = ref('')
+const resendCountdown = ref(0)
+const codeExpiresIn = ref(0)
+let countdownTimer: ReturnType<typeof setInterval> | undefined
+
+function startCountdown(seconds: number) {
+  resendCountdown.value = Math.max(1, seconds)
+  if (countdownTimer) clearInterval(countdownTimer)
+  countdownTimer = setInterval(() => {
+    resendCountdown.value -= 1
+    if (resendCountdown.value <= 0 && countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = undefined
+    }
+  }, 1000)
+}
+
+onBeforeUnmount(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
 
 const passwordHint = computed(() => {
   if (!form.password) return '至少8位，建议同时包含字母和数字'
@@ -23,17 +47,47 @@ const passwordHint = computed(() => {
   return '密码长度符合要求'
 })
 
+async function sendCode() {
+  error.value = ''
+  demoCode.value = ''
+  const phone = form.phone.trim()
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    error.value = '请输入正确的11位手机号'
+    return
+  }
+  sending.value = true
+  try {
+    const response = await api.post('/auth/sms/send', { phone, purpose: 'REGISTER' })
+    demoCode.value = response.data.data.demoCode || ''
+    codeExpiresIn.value = response.data.data.expiresIn || 300
+    startCountdown(response.data.data.retryAfter || 60)
+  } catch (event) {
+    error.value = (event as Error).message
+  } finally {
+    sending.value = false
+  }
+}
+
 async function submit() {
   error.value = ''
   const username = form.username.trim()
   const nickname = form.nickname.trim()
   const email = form.email.trim()
+  const phone = form.phone.trim()
   if (!/^[a-zA-Z0-9_-]{3,64}$/.test(username)) {
     error.value = '用户名需为3—64位字母、数字、下划线或短横线'
     return
   }
   if (!nickname) {
     error.value = '请填写展示昵称'
+    return
+  }
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    error.value = '手机号为必填项，请输入正确的11位手机号'
+    return
+  }
+  if (!/^\d{6}$/.test(form.verificationCode.trim())) {
+    error.value = '请输入6位手机验证码'
     return
   }
   if (form.password.length < 8 || form.password.length > 72) {
@@ -54,6 +108,8 @@ async function submit() {
       username,
       nickname,
       email: email || undefined,
+      phone,
+      verification_code: form.verificationCode.trim(),
       password: form.password,
     })
     const requested = typeof route.query.redirect === 'string' ? route.query.redirect : ''
@@ -96,6 +152,18 @@ async function submit() {
         <input v-model="form.email" type="email" maxlength="255" autocomplete="email" placeholder="用于区分账号，不会公开展示" />
       </label>
       <label>
+        <span>手机号（必填）</span>
+        <input v-model="form.phone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="用于验证码登录和找回密码" required />
+      </label>
+      <label>
+        <span>手机验证码</span>
+        <div class="register-code-row">
+          <input v-model="form.verificationCode" inputmode="numeric" maxlength="6" placeholder="请输入6位验证码" required />
+          <button type="button" :disabled="sending || resendCountdown > 0" @click="sendCode">{{ sending ? '生成中…' : resendCountdown > 0 ? `${resendCountdown}s后重试` : '获取验证码' }}</button>
+        </div>
+        <small v-if="demoCode" class="demo-code">比赛演示验证码：<b>{{ demoCode }}</b>（{{ Math.ceil(codeExpiresIn / 60) }}分钟内有效）</small>
+      </label>
+      <label>
         <span>密码</span>
         <input v-model="form.password" type="password" maxlength="72" autocomplete="new-password" placeholder="设置登录密码" required />
         <small>{{ passwordHint }}</small>
@@ -117,4 +185,5 @@ async function submit() {
 <style scoped>
 .register-page{display:grid;grid-template-columns:.9fr 1.1fr;min-height:670px;overflow:hidden;border:1px solid #e1d7c9;border-radius:22px;background:#fff;box-shadow:0 24px 70px rgba(80,48,34,.12)}.register-page>aside{padding:52px;color:#fff;background:linear-gradient(145deg,#84212a,#b84037 58%,#d58b43)}.register-page>aside>p{margin:0;color:#f0ca82;font-size:10px;font-weight:900;letter-spacing:.18em}.register-page h1{margin:22px 0;font-size:48px;line-height:1.08}.register-page>aside>span{color:#f4dfd1;line-height:1.8}.register-page ol{display:grid;gap:15px;margin:48px 0 0;padding:0;list-style:none}.register-page li{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid rgba(255,255,255,.22)}.register-page li b{color:#f2cc82}.register-page>form{display:grid;align-content:center;gap:15px;padding:45px 52px}.register-page form header small{color:#a9282f;font-weight:900;letter-spacing:.15em}.register-page form h2{margin:5px 0;font-size:34px}.register-page form header p{margin:0;color:#746d66;font-size:12px}.register-page form header a{color:#a9282f;font-weight:800}.register-page form>label,.register-grid label{display:grid;gap:7px;color:#4e4944;font-size:12px;font-weight:700}.register-page input:not([type=checkbox]){height:47px;padding:0 13px;border:1px solid #d9cec0;border-radius:9px;background:#fffdfa}.register-page label small{color:#837970;font-weight:400}.register-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.register-agreement{grid-template-columns:auto 1fr!important;align-items:start;gap:9px!important;color:#6f665e!important;font-weight:400!important;line-height:1.55}.register-agreement input{margin-top:3px}.register-error{margin:0;padding:11px 13px;color:#9d252d;background:#fff0ef;border-radius:8px;font-size:12px}.register-page form>button{min-height:49px;color:#fff;background:#a9282f;border:0;border-radius:9px;font-weight:900}.register-page form>button:disabled{opacity:.6}
 @media(max-width:820px){.register-page{grid-template-columns:1fr}.register-page>aside{padding:35px}.register-page h1{font-size:38px}.register-page ol{display:none}.register-page>form{padding:35px}}@media(max-width:520px){.register-grid{grid-template-columns:1fr}.register-page>form{padding:27px 22px}}
+.register-code-row{display:grid;grid-template-columns:1fr 118px;gap:8px}.register-code-row button{border:0;border-radius:9px;color:#fff;background:#285a47;font-size:12px;font-weight:800}.register-code-row button:disabled{opacity:.6}.demo-code{padding:9px 11px;color:#285a47!important;background:#edf6f1;border-radius:7px;font-weight:400!important}.demo-code b{letter-spacing:.12em}
 </style>

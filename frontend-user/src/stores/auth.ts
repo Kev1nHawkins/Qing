@@ -5,6 +5,7 @@ import { api } from '@/services/api'
 interface User {
   id: number
   username: string
+  phone: string | null
   nickname: string
   points_total: number
 }
@@ -12,6 +13,8 @@ interface User {
 interface RegisterPayload {
   username: string
   email?: string
+  phone: string
+  verification_code: string
   password: string
   nickname: string
 }
@@ -29,6 +32,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     const { data } = await api.post('/auth/login', { username, password })
+    applySession(data.data.access_token, data.data.user)
+  }
+
+  async function loginWithSms(phone: string, verificationCode: string) {
+    const { data } = await api.post('/auth/sms/login', {
+      phone,
+      verification_code: verificationCode,
+    })
     applySession(data.data.access_token, data.data.user)
   }
 
@@ -51,5 +62,5 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, isLoggedIn, login, register, fetchMe, logout }
+  return { user, isLoggedIn, login, loginWithSms, register, fetchMe, logout }
 })
