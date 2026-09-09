@@ -7,6 +7,7 @@ import XiaomianMascot from '@/components/XiaomianMascot.vue'
 import CampusSceneCard from '@/components/CampusSceneCard.vue'
 import CreativeWorkbench from '@/components/CreativeWorkbench.vue'
 import { cultureVisual, visuals } from '@/data/visuals'
+import cultureCoverSources from '@/data/cultureCovers.json'
 import gzuOfficialLogo from '@/assets/culture/gzu-official-logo.png'
 import type { Badge, CreationTemplate, Culture, CultureRoute, PageData, Post } from '@/types'
 
@@ -34,6 +35,11 @@ const posts = ref<Post[]>([])
 const badges = ref<Badge[]>([])
 const platformError = ref('')
 const selected = ref<Culture | null>(null)
+const selectedCover = computed(() => {
+  if (!selected.value) return null
+  const cover = cultureCoverSources[selected.value.slug as keyof typeof cultureCoverSources]
+  return cover?.path === selected.value.cover_image_url ? cover : null
+})
 const loading = ref(false)
 const error = ref('')
 const keyword = ref('')
@@ -278,13 +284,14 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
         <div class="m2-tools"><label><span>搜索文化内容</span><input v-model="keyword" type="search" placeholder="搜索木棉、粤剧、校园……" /></label><div class="m2-filters"><button v-for="item in categories" :key="item" :class="{ active: category === item }" @click="category = item">{{ item }}</button></div></div>
         <PageState :loading="loading" :error="error" :empty="!loading && !error && filtered.length === 0" empty-text="没有匹配的文化条目" @retry="loadCultures" />
         <div v-if="!loading && filtered.length" class="m2-card-grid">
-          <button v-for="(item,index) in filtered" :key="item.id" class="m2-card" @click="openCulture(item)"><div class="m2-card-photo"><MediaImage :src="item.cover_image_url || cultureVisual(item.category,index)" :alt="item.title" /></div><div class="m2-card-body"><span>{{ item.category }}</span><h3>{{ item.title }}</h3><p>{{ item.summary }}</p></div></button>
+          <button v-for="(item,index) in filtered" :key="item.id" class="m2-card" @click="openCulture(item)"><div class="m2-card-photo" :class="{ 'm2-emblem-cover': item.slug === 'guangzhou-university-emblem' }"><MediaImage :src="item.cover_image_url || cultureVisual(item.category,index)" :alt="item.title" :eager="index < 3" /></div><div class="m2-card-body"><span>{{ item.category }}</span><h3>{{ item.title }}</h3><p>{{ item.summary }}</p></div></button>
         </div>
       </template>
 
       <template v-else-if="view === 'detail' && selected">
         <button class="m2-back" @click="navigate('cultures')">← 返回文化探索</button>
-        <section class="m2-detail"><div class="m2-detail-photo"><MediaImage :src="selected.cover_image_url || cultureVisual(selected.category)" :alt="selected.title" /></div><div class="m2-detail-copy"><span>{{ selected.category }}</span><h1>{{ selected.title }}</h1><p>{{ selected.summary }}</p><button class="m2-primary" @click="navigate('guide')">问问数字人小棉</button></div></section>
+        <section class="m2-detail"><div class="m2-detail-photo" :class="{ 'm2-emblem-cover': selected.slug === 'guangzhou-university-emblem' }"><MediaImage :src="selected.cover_image_url || cultureVisual(selected.category)" :alt="selected.title" eager /></div><div class="m2-detail-copy"><span>{{ selected.category }}</span><h1>{{ selected.title }}</h1><p>{{ selected.summary }}</p><button class="m2-primary" @click="navigate('guide')">问问数字人小棉</button></div></section>
+        <p v-if="selectedCover" class="m2-cover-credit">{{ selectedCover.kind }} · <a :href="selectedCover.url" target="_blank" rel="noopener noreferrer">{{ selectedCover.title }} ↗</a><span v-if="selectedCover.license.startsWith('CC BY-SA')"> · {{ selectedCover.license }}</span></p>
         <article class="m2-prose"><p v-for="paragraph in selected.content.split('\n').filter(Boolean)" :key="paragraph">{{ paragraph }}</p><div class="m2-source"><b>了解更多</b><a v-if="selected.source_url" :href="selected.source_url" target="_blank" rel="noreferrer">{{ selected.source_title }} ↗</a><span v-else>{{ selected.source_title }}</span></div></article>
       </template>
 
@@ -310,3 +317,10 @@ onMounted(() => { loadCultures(); loadPlatform(); if (localStorage.getItem('acce
     <footer><b>岭潮共创</b><span>岭南文化与校园文化传承 AI 传播平台 · 广州大学</span></footer>
   </div>
 </template>
+
+<style scoped>
+.m2-cover-credit { margin: 12px 0 24px; color: #647068; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.m2-cover-credit a { color: inherit; text-underline-offset: 3px; }
+.m2-emblem-cover :deep(.media-image) { background: #fff; }
+.m2-emblem-cover :deep(img) { object-fit: contain; padding: 24px; box-sizing: border-box; }
+</style>
