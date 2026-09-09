@@ -23,6 +23,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     { path: '/community', component: () => import('@/views/CommunityView.vue') },
+    { path: '/points-shop', component: () => import('@/views/PointsShopView.vue') },
     { path: '/profile', component: () => import('@/views/ProfileView.vue'), meta: { requiresAuth: true } },
     { path: '/login', component: () => import('@/views/LoginView.vue') },
     { path: '/register', component: () => import('@/views/RegisterView.vue') },
