@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 120
     admin_username: str = "admin"
     admin_password: str = "Admin123!"
+    sms_mode: str = "demo"
+    sms_code_expire_seconds: int = 300
+    sms_retry_after_seconds: int = 60
     llm_provider: str = "mock"
     deepseek_api_key: SecretStr | None = None
     deepseek_base_url: str = "https://api.deepseek.com"
