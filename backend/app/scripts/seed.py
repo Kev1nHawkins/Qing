@@ -13,6 +13,7 @@ from app.models.enums import BadgeRuleType, PublishStatus, TaskType
 from app.models.points import Badge
 from app.models.route import Route, RouteTask
 from app.models.user import Role, User
+from app.scripts.culture_catalog import CULTURE_SPECS
 from app.services.creation.system_templates import SYSTEM_FREE_IMAGE_TEMPLATE_CODE
 
 
@@ -74,23 +75,22 @@ async def ensure_badges(session) -> None:
 
 
 async def ensure_demo_routes(session, admin: User) -> None:
-    culture = await session.scalar(
-        select(CultureItem).where(CultureItem.slug == "kapok-hero-flower")
-    )
-    if not culture:
-        culture = CultureItem(
-            title="木棉：广州的英雄花",
-            slug="kapok-hero-flower",
-            category="岭南文化",
-            summary="从木棉的城市记忆出发，连接广州与广州大学校园文化。",
-            content="木棉在岭南地区具有鲜明的地域文化意象。本条目为演示数据，正式内容须补充权威来源复核。",
-            source_title="岭潮共创演示素材（待内容负责人复核）",
-            source_url=None,
-            status=PublishStatus.PUBLISHED.value,
-            created_by_id=admin.id,
+    cultures: dict[str, CultureItem] = {}
+    for spec in CULTURE_SPECS:
+        item = await session.scalar(
+            select(CultureItem).where(CultureItem.slug == spec["slug"])
         )
-        session.add(culture)
-        await session.flush()
+        if item is None:
+            item = CultureItem(**spec, created_by_id=admin.id)
+            session.add(item)
+            await session.flush()
+        elif not item.cover_image_url or item.cover_image_url.startswith(
+            ("/demo/culture-covers/", "/demo/culture-articles/")
+        ):
+            # Refresh managed demo covers, preserving edited text and uploaded covers.
+            item.cover_image_url = spec["cover_image_url"]
+        cultures[spec["slug"]] = item
+    culture = cultures["kapok-hero-flower"]
 
     location_renames = {
         "红棉广场": "何世杰体育馆广场",

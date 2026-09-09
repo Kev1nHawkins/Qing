@@ -18,19 +18,39 @@ DEMO_DATA = (
 )
 
 TAG_SLUGS = {
+    "一校三园": "three-campus-network",
     "AI共创": "ai-co-creation",
     "人机共创": "human-ai-co-creation",
     "信息设计": "information-design",
     "公共空间": "public-space",
+    "共同体": "community-belonging",
+    "临时公告": "temporary-notice",
+    "使用观察": "usage-observation",
     "剪纸": "paper-cutting",
     "口述记录": "oral-history",
+    "十三行": "thirteen-factories",
+    "商贸文化": "trade-culture",
     "声音档案": "sound-archive",
+    "声音可视化": "sound-visualization",
+    "声音记录": "sound-recording",
     "城市观察": "urban-observation",
+    "城市记忆": "city-memory",
+    "夜间校园": "night-campus",
     "岭南建筑": "lingnan-architecture",
+    "岭南园林": "lingnan-gardens",
     "岭南文化": "lingnan-culture",
+    "工艺思维": "craft-thinking",
     "广州大学": "guangzhou-university",
+    "广州早茶": "guangzhou-morning-tea",
+    "广州玉雕": "guangzhou-jade-carving",
+    "广式月饼": "cantonese-mooncake",
+    "广绣": "guangzhou-embroidery",
     "广彩": "guangcai",
+    "广东音乐": "guangdong-music",
+    "建筑装饰": "architectural-decoration",
     "影像记录": "visual-record",
+    "志愿服务": "volunteer-service",
+    "日常劳动": "daily-work",
     "授权核验": "license-review",
     "文化伦理": "cultural-ethics",
     "文化寻迹": "culture-trail",
@@ -39,31 +59,49 @@ TAG_SLUGS = {
     "旧照片": "historical-photo",
     "未来校园": "future-campus",
     "木棉": "kapok",
+    "校园空间": "campus-space",
     "校园打卡": "campus-check-in",
     "校园文化": "campus-culture",
     "校园服务": "campus-service",
     "校园生活": "campus-life",
+    "校徽规范": "emblem-guidelines",
+    "植物核验": "botanical-review",
     "活动回顾": "event-recap",
+    "民俗边界": "folk-custom-ethics",
+    "波罗诞": "boluo-festival",
     "海报设计": "poster-design",
+    "海上丝绸之路": "maritime-silk-road",
+    "海丝文化": "maritime-silk-road-culture",
     "粤剧": "cantonese-opera",
     "粤语": "cantonese-language",
+    "清晨": "early-morning",
+    "珠江": "pearl-river",
     "红棉": "red-kapok",
     "路线公告": "route-notice",
+    "社团生活": "student-club-life",
     "角色设计": "character-design",
     "角色设定": "character-concept",
     "视觉设计": "visual-design",
     "设计方法": "design-method",
     "资料核验": "source-review",
+    "纹样设计": "pattern-design",
+    "花城": "flower-city",
+    "西关大屋": "xiguan-mansion",
     "醒狮文化": "lion-dance",
+    "迎春花市": "spring-flower-market",
     "雨天": "rainy-day",
     "青年记忆": "youth-memory",
+    "陈家祠": "chen-clan-academy",
+    "隐私边界": "privacy-boundary",
     "饮食记忆": "food-memory",
+    "饮食文化": "food-culture",
     "骑楼": "arcade-building",
     "交互设计": "interaction-design",
     "官方活动": "official-event",
     "审核演示": "moderation-demo",
     "待审核": "pending-review",
     "图书馆": "library",
+    "驳回": "rejected-review",
 }
 
 DEMO_USERS = [
@@ -130,6 +168,7 @@ async def ensure_ai_creation(
     if creation:
         creation.output_url = spec.get("cover_image_url")
         creation.description = spec["content"]
+        creation.culture_item_id = culture.id
         return creation
     creation = AICreation(
         user_id=author.id,
@@ -237,22 +276,57 @@ async def main() -> None:
     if len(specs) < 20:
         raise RuntimeError("社区演示内容不得少于 20 条")
 
+    culture_slugs = set()
+    for spec in specs:
+        kind = spec.get("kind")
+        culture_slug = spec.get("culture_slug")
+        if kind not in {"AI", "CAMPUS", "CULTURE"}:
+            raise RuntimeError(f"社区演示内容类型无效：{kind}")
+        if kind == "CAMPUS":
+            if culture_slug is not None:
+                raise RuntimeError(
+                    f"校园打卡不得关联文化条目：{spec.get('title')}"
+                )
+            continue
+        if not isinstance(culture_slug, str) or not culture_slug:
+            raise RuntimeError(
+                f"{kind} 演示内容缺少 culture_slug：{spec.get('title')}"
+            )
+        culture_slugs.add(culture_slug)
+
     async with AsyncSessionLocal() as session:
         users = await ensure_demo_users(session, password)
-        culture = await session.scalar(
-            select(CultureItem).where(CultureItem.slug == "kapok-hero-flower")
-        )
+        cultures = {
+            culture.slug: culture
+            for culture in (
+                await session.scalars(
+                    select(CultureItem).where(CultureItem.slug.in_(culture_slugs))
+                )
+            ).all()
+        }
+        missing_culture_slugs = culture_slugs - cultures.keys()
+        if missing_culture_slugs:
+            missing = ", ".join(sorted(missing_culture_slugs))
+            raise RuntimeError(
+                f"社区演示内容关联的文化条目不存在：{missing}；"
+                "请先运行 python -m app.scripts.seed"
+            )
         template = await session.scalar(
             select(CreationTemplate).where(
                 CreationTemplate.code == "kapok-poster"
             )
         )
-        if not culture or not template:
-            raise RuntimeError("请先运行 python -m app.scripts.seed 初始化文化与模板")
+        if not template:
+            raise RuntimeError("请先运行 python -m app.scripts.seed 初始化创作模板")
 
         posts = []
         for index, spec in enumerate(specs):
             author = users[index % len(users)]
+            culture = (
+                cultures[spec["culture_slug"]]
+                if spec["culture_slug"] is not None
+                else None
+            )
             post = await session.scalar(
                 select(Post).where(
                     Post.author_id == author.id,
@@ -263,6 +337,7 @@ async def main() -> None:
                 creation = None
                 culture_id = None
                 if spec["kind"] == "AI":
+                    assert culture is not None
                     creation = await ensure_ai_creation(
                         session,
                         author=author,
@@ -272,6 +347,7 @@ async def main() -> None:
                     )
                     culture_id = culture.id
                 elif spec["kind"] == "CULTURE":
+                    assert culture is not None
                     culture_id = culture.id
 
                 post = Post(
@@ -290,6 +366,7 @@ async def main() -> None:
                 post.cover_image_url = spec.get("cover_image_url")
                 post.status = spec["status"]
                 if spec["kind"] == "AI":
+                    assert culture is not None
                     creation = await ensure_ai_creation(
                         session,
                         author=author,
@@ -300,6 +377,7 @@ async def main() -> None:
                     post.creation_id = creation.id
                     post.culture_item_id = culture.id
                 elif spec["kind"] == "CULTURE":
+                    assert culture is not None
                     post.creation_id = None
                     post.culture_item_id = culture.id
                 else:
