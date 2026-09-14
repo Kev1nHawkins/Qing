@@ -9,6 +9,7 @@ class PostCreate(BaseModel):
     culture_item_id: int | None = None
     creation_id: int | None = None
     cover_image_url: str | None = None
+    image_urls: list[str] = Field(default_factory=list, max_length=6)
     tags: list[str] = Field(default_factory=list, max_length=10)
 
 
@@ -30,6 +31,7 @@ class PostRead(Timestamped):
     title: str
     content: str
     cover_image_url: str | None
+    image_urls: list[str] = Field(default_factory=list)
     status: str
     like_count: int
     comment_count: int

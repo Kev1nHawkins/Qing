@@ -20,7 +20,11 @@ from app.models.user import Role, User
 
 
 @pytest.fixture
-def community_client(tmp_path: Path) -> Iterator[dict]:
+def community_client(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[dict]:
+    monkeypatch.setenv("LINGCHAO_UPLOAD_ROOT", str(tmp_path / "uploads"))
     database_path = (tmp_path / "community.db").resolve().as_posix()
     engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}")
     session_factory = async_sessionmaker(
@@ -186,6 +190,61 @@ def create_post(context: dict, **overrides) -> dict:
     assert response.status_code == 201
     assert response.json()["requestId"]
     return response.json()["data"]
+
+
+def minimal_png() -> bytes:
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + b"\x00\x00\x00\rIHDR"
+        + (1).to_bytes(4, "big")
+        + (1).to_bytes(4, "big")
+        + b"\x08\x06\x00\x00\x00"
+        + b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+
+def test_community_upload_detects_actual_image_type(
+    community_client: dict,
+) -> None:
+    response = community_client["client"].post(
+        "/api/v1/community/uploads",
+        headers={
+            **community_client["headers"]["owner"],
+            "Content-Type": "image/jpeg",
+        },
+        content=minimal_png(),
+    )
+
+    assert response.status_code == 201
+    data = response.json()["data"]
+    assert data["mimeType"] == "image/png"
+    assert data["publicUrl"].endswith(".png")
+
+
+def test_post_supports_six_images_with_legacy_cover_compatibility(
+    community_client: dict,
+) -> None:
+    image_urls = [f"/uploads/community/image-{index}.jpg" for index in range(6)]
+    post = create_post(community_client, image_urls=image_urls)
+
+    assert post["cover_image_url"] == image_urls[0]
+    assert post["image_urls"] == image_urls
+
+    listed = community_client["client"].get("/api/v1/community/posts")
+    assert listed.status_code == 200
+    assert listed.json()["data"]["items"][0]["image_urls"] == image_urls
+
+    too_many = community_client["client"].post(
+        "/api/v1/community/posts",
+        headers=community_client["headers"]["owner"],
+        json={
+            "title": "超过图片上限",
+            "content": "不应创建成功。",
+            "image_urls": image_urls + ["/uploads/community/image-6.jpg"],
+            "tags": [],
+        },
+    )
+    assert too_many.status_code == 422
 
 
 def test_like_is_idempotent_and_count_matches_relation(community_client: dict) -> None:

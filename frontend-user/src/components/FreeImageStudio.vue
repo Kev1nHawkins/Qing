@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import MediaImage from '@/components/MediaImage.vue'
 import { api } from '@/services/api'
+import { freeImageCreationSession } from '@/services/creationSession'
 import type { Creation } from '@/types'
 
-type AspectRatio = 'SQUARE' | 'PORTRAIT' | 'LANDSCAPE'
-
 const emit = defineEmits<{ login: []; busyChange: [busy: boolean] }>()
-const prompt = ref('')
-const aspectRatio = ref<AspectRatio>('PORTRAIT')
-const creation = ref<Creation | null>(null)
-const generating = ref(false)
-const feedback = ref('')
+const prompt = toRef(freeImageCreationSession, 'prompt')
+const aspectRatio = toRef(freeImageCreationSession, 'aspectRatio')
+const creation = toRef(freeImageCreationSession, 'creation')
+const generating = toRef(freeImageCreationSession, 'generating')
+const feedback = toRef(freeImageCreationSession, 'feedback')
 const saving = ref(false)
 const examples = [
   '晨光中的岭南骑楼建筑，写实摄影，温暖光影，丰富细节',
@@ -21,7 +20,7 @@ const examples = [
 ]
 const canvasClass = computed(() => `ratio-${aspectRatio.value.toLowerCase()}`)
 
-watch(generating, value => emit('busyChange', value))
+watch(generating, value => emit('busyChange', value), { immediate: true })
 
 async function loadCreation(id: number) {
   const { data } = await api.get<{ data: Creation }>(`/creations/${id}`)

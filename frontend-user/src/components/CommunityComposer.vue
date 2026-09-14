@@ -15,7 +15,15 @@ const props = defineProps<{
   initialDraft?: CommunityPostDraft | null
 }>()
 const emit = defineEmits<{ publish: [payload: PublishPostPayload] }>()
-const form = reactive({ title: '', content: '', cultureItemId: '', creationId: '', coverImageUrl: '', tags: '' })
+const form = reactive({
+  title: '',
+  content: '',
+  cultureItemId: '',
+  creationId: '',
+  imageUrls: [] as string[],
+  manualImageUrl: '',
+  tags: '',
+})
 const localError = ref('')
 const uploadingImage = ref(false)
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -28,7 +36,8 @@ function applyCreation(creation: CreationOption | null) {
   form.title = creation.title
   form.content = creation.description || `分享我的岭潮 AI 共创作品《${creation.title}》。`
   form.cultureItemId = creation.culture_item_id ? String(creation.culture_item_id) : ''
-  form.coverImageUrl = ''
+  form.imageUrls = []
+  form.manualImageUrl = ''
   form.tags = (creation.tags || []).join('，')
 }
 
@@ -55,12 +64,17 @@ function submit() {
   if (!form.title.trim() || !form.content.trim()) return void (localError.value = '请填写标题和正文。')
   if (uploadingImage.value) return void (localError.value = '图片仍在上传，请稍候。')
   if (selectedCreation.value?.status !== 'SUCCESS' && form.creationId) return void (localError.value = '只有生成成功的 AI 作品可以发布。')
+  const imageUrls = [...form.imageUrls]
+  const manualImageUrl = form.manualImageUrl.trim()
+  if (manualImageUrl && !imageUrls.includes(manualImageUrl)) imageUrls.push(manualImageUrl)
+  if (imageUrls.length > 6) return void (localError.value = '每篇作品最多发布 6 张图片。')
   emit('publish', {
     title: form.title.trim(),
     content: form.content.trim(),
     culture_item_id: form.cultureItemId ? Number(form.cultureItemId) : null,
     creation_id: form.creationId ? Number(form.creationId) : null,
-    cover_image_url: selectedCreation.value ? null : form.coverImageUrl.trim() || null,
+    cover_image_url: selectedCreation.value ? null : imageUrls[0] || null,
+    image_urls: selectedCreation.value ? [] : imageUrls,
     tags: form.tags.split(/[,，]/).map(tag => tag.trim()).filter(Boolean).slice(0, 10),
   })
 }
@@ -68,46 +82,83 @@ function submit() {
 async function selectImage(event: Event) {
   localError.value = ''
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+  const files = Array.from(input.files || [])
+  if (!files.length) return
   if (!props.loggedIn) {
     localError.value = '请先登录，再添加帖子图片。'
     input.value = ''
     return
   }
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    localError.value = '仅支持 JPG、PNG 或 WebP 图片。'
-    input.value = ''
-    return
-  }
-  if (file.size > 8 * 1024 * 1024) {
-    localError.value = '图片大小不能超过 8 MB。'
+  if (form.imageUrls.length + files.length > 6) {
+    localError.value = '每篇作品最多发布 6 张图片。'
     input.value = ''
     return
   }
   uploadingImage.value = true
   try {
-    const { data } = await api.post<{ data: { publicUrl: string } }>(
-      '/community/uploads',
-      file,
-      { headers: { 'Content-Type': file.type } },
-    )
-    form.coverImageUrl = data.data.publicUrl
+    for (const file of files) {
+      if (file.size > 8 * 1024 * 1024) throw new Error(`${file.name} 超过 8 MB。`)
+      const image = await normalizeImage(file)
+      if (image.size > 8 * 1024 * 1024) throw new Error(`${file.name} 转换后仍超过 8 MB。`)
+      const { data } = await api.post<{ data: { publicUrl: string } }>(
+        '/community/uploads',
+        image,
+        { headers: { 'Content-Type': image.type } },
+      )
+      form.imageUrls.push(data.data.publicUrl)
+    }
   } catch (event) {
     localError.value = (event as Error).message
-    input.value = ''
   } finally {
     uploadingImage.value = false
+    input.value = ''
   }
 }
 
-function removeImage() {
-  form.coverImageUrl = ''
-  if (imageInput.value) imageInput.value.value = ''
+async function normalizeImage(file: File): Promise<Blob> {
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch {
+    throw new Error(`${file.name} 不是浏览器可识别的图片。`)
+  }
+  const maxPixels = 20_000_000
+  const scale = Math.min(1, Math.sqrt(maxPixels / (bitmap.width * bitmap.height)))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+  const context = canvas.getContext('2d')
+  if (!context) {
+    bitmap.close()
+    throw new Error('当前浏览器无法处理这张图片。')
+  }
+  context.fillStyle = '#fff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  bitmap.close()
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      blob => blob ? resolve(blob) : reject(new Error('图片转换失败。')),
+      'image/jpeg',
+      0.9,
+    )
+  })
+}
+
+function removeImage(index: number) {
+  form.imageUrls.splice(index, 1)
 }
 
 function reset() {
-  Object.assign(form, { title: '', content: '', cultureItemId: '', creationId: '', coverImageUrl: '', tags: '' })
+  Object.assign(form, {
+    title: '',
+    content: '',
+    cultureItemId: '',
+    creationId: '',
+    imageUrls: [],
+    manualImageUrl: '',
+    tags: '',
+  })
   if (imageInput.value) imageInput.value.value = ''
 }
 defineExpose({ reset })
@@ -132,16 +183,19 @@ defineExpose({ reset })
         <span>添加图片（可选）</span>
         <div class="composer-media-actions">
           <label class="composer-upload-button">
-            <input ref="imageInput" type="file" accept="image/jpeg,image/png,image/webp" @change="selectImage" />
-            {{ uploadingImage ? '正在上传…' : form.coverImageUrl ? '更换图片' : '选择本地图片' }}
+            <input ref="imageInput" type="file" accept="image/*" multiple @change="selectImage" />
+            {{ uploadingImage ? '正在上传…' : form.imageUrls.length ? '继续添加图片' : '选择本地图片' }}
           </label>
-          <button v-if="form.coverImageUrl" type="button" @click="removeImage">移除图片</button>
+          <small>{{ form.imageUrls.length }}/6</small>
         </div>
-        <div v-if="form.coverImageUrl" class="composer-image-preview">
-          <MediaImage :src="form.coverImageUrl" alt="待发布帖子图片预览" />
+        <div v-if="form.imageUrls.length" class="composer-image-grid">
+          <div v-for="(url, index) in form.imageUrls" :key="url" class="composer-image-preview">
+            <MediaImage :src="url" :alt="`待发布帖子图片 ${index + 1}`" />
+            <button type="button" :aria-label="`移除第 ${index + 1} 张图片`" @click="removeImage(index)">×</button>
+          </div>
         </div>
-        <label><span>或填写图片地址</span><input v-model="form.coverImageUrl" type="url" placeholder="https://…" /></label>
-        <small>支持 JPG、PNG、WebP，最大 8 MB；上传成功后再随帖子发布。</small>
+        <label><span>或填写图片地址（可选）</span><input v-model="form.manualImageUrl" type="text" placeholder="https://…" /></label>
+        <small>最多 6 张，每张最大 8 MB；本地图片会自动转换为兼容格式，无需再填写地址。</small>
       </section>
       <label><span>文化标签</span><input v-model="form.tags" placeholder="木棉，广彩，校园文化" /></label>
       <p v-if="localError" class="composer-error">{{ localError }}</p>
@@ -153,5 +207,5 @@ defineExpose({ reset })
 
 <style scoped>
 .community-composer{padding:24px;background:#fff;border:1px solid #ded8ce;border-radius:14px}.composer-title{display:flex;justify-content:space-between;align-items:start}.composer-title h2{margin:0}.composer-title p{margin:5px 0 18px;color:#756d65}.community-composer form,.community-composer label{display:grid;gap:7px}.community-composer form{gap:14px}.community-composer label span{font-size:12px;font-weight:800}.community-composer input,.community-composer textarea,.community-composer select{width:100%;box-sizing:border-box;padding:11px;border:1px solid #d9d1c6;border-radius:8px;background:#fff}.composer-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.creation-preview{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:10px;background:#edf3ef;border-radius:9px}.creation-preview :deep(.media-image){height:130px;border-radius:6px}.creation-preview div{display:grid;align-content:center;gap:6px}.creation-preview span,.creation-preview small{color:#5f6c65;font-size:11px}.composer-error{margin:0;padding:10px;color:#8e2730;background:#f8e7e5;border-radius:7px}.composer-submit,.composer-login{display:grid;place-items:center;min-height:46px;border:0;border-radius:7px;color:#fff;background:#9f2d35;font-weight:800}.composer-login{background:#285a47}@media(max-width:560px){.composer-row{grid-template-columns:1fr}.creation-preview{grid-template-columns:90px 1fr}}
-.composer-media{display:grid;gap:9px}.composer-media>span{font-size:12px;font-weight:800}.composer-media-actions{display:flex;gap:8px}.composer-upload-button,.composer-media-actions>button{display:grid;place-items:center;min-height:42px;padding:0 14px;border:1px solid #cfd7d1;border-radius:8px;color:#285a47;background:#edf3ef;font-weight:800;cursor:pointer}.composer-upload-button input{display:none}.composer-media-actions>button{color:#8e2730;background:#fff}.composer-image-preview{height:210px;overflow:hidden;border-radius:8px}.composer-media>small{color:#69736e;font-size:11px}
+.composer-media{display:grid;gap:9px}.composer-media>span{font-size:12px;font-weight:800}.composer-media-actions{display:flex;align-items:center;gap:8px}.composer-media-actions>small{color:#69736e}.composer-upload-button{display:grid;place-items:center;min-height:42px;padding:0 14px;border:1px solid #cfd7d1;border-radius:8px;color:#285a47;background:#edf3ef;font-weight:800;cursor:pointer}.composer-upload-button input{display:none}.composer-image-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.composer-image-preview{position:relative;height:120px;overflow:hidden;border-radius:8px}.composer-image-preview :deep(.media-image){height:100%}.composer-image-preview>button{position:absolute;right:5px;top:5px;width:28px;height:28px;border:0;border-radius:50%;color:#fff;background:rgba(117,28,36,.9);font-size:20px;line-height:1}.composer-media>small{color:#69736e;font-size:11px}@media(max-width:560px){.composer-image-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>

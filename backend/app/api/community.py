@@ -19,7 +19,7 @@ from app.schemas.community import (
     PostCreate,
     PostUpdate,
 )
-from app.services.community import post_load_options, post_payload
+from app.services.community import encode_post_images, post_load_options, post_payload
 from app.services.task_evidence import read_image, upload_root
 
 router = APIRouter(prefix="/community", tags=["Community"])
@@ -139,7 +139,10 @@ async def create_post(
         if creation.status != CreationStatus.SUCCESS.value:
             raise HTTPException(status_code=409, detail="AI 作品尚未生成成功")
 
-    data = payload.model_dump(exclude={"tags"})
+    data = payload.model_dump(exclude={"tags", "image_urls"})
+    requested_images = payload.image_urls or (
+        [payload.cover_image_url] if payload.cover_image_url else []
+    )
     if creation is not None:
         if not creation.output_url or not (
             creation.output_url.startswith("/uploads/")
@@ -147,9 +150,10 @@ async def create_post(
             or creation.output_url.startswith("http://")
         ):
             raise HTTPException(status_code=409, detail="AI 作品缺少可发布的图片结果")
-        data["cover_image_url"] = creation.output_url
+        requested_images = [creation.output_url]
         if data["culture_item_id"] is None:
             data["culture_item_id"] = creation.culture_item_id
+    data["cover_image_url"] = encode_post_images(requested_images)
     post = Post(
         **data,
         author_id=current_user.id,

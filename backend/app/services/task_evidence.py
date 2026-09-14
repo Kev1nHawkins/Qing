@@ -107,6 +107,20 @@ def validate_image(content: bytes, mime_type: str) -> None:
         raise HTTPException(status_code=400, detail="图片像素尺寸过大")
 
 
+def detect_image_type(content: bytes) -> tuple[str, str] | None:
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg", ".jpg"
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png", ".png"
+    if (
+        len(content) >= 12
+        and content.startswith(b"RIFF")
+        and content[8:12] == b"WEBP"
+    ):
+        return "image/webp", ".webp"
+    return None
+
+
 async def read_image(request: Request) -> tuple[bytes, str, str]:
     mime_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     suffix = ALLOWED_IMAGE_TYPES.get(mime_type)
@@ -120,8 +134,12 @@ async def read_image(request: Request) -> tuple[bytes, str, str]:
     if not content:
         raise HTTPException(status_code=400, detail="图片内容为空")
     image = bytes(content)
-    validate_image(image, mime_type)
-    return image, mime_type, suffix
+    detected = detect_image_type(image)
+    if not detected:
+        raise HTTPException(status_code=400, detail="图片内容与文件格式不匹配")
+    actual_mime_type, actual_suffix = detected
+    validate_image(image, actual_mime_type)
+    return image, actual_mime_type, actual_suffix
 
 
 def write_task_evidence(content: bytes, suffix: str) -> tuple[str, Path]:
