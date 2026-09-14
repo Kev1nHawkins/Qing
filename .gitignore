@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!.env.demo.example
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -39,3 +40,9 @@ static/generated/*
 Thumbs.db
 .idea/
 .vscode/
+
+# Generated Windows demo artifacts. Keep source/configuration in Git, not binaries.
+.env.demo.runtime
+release/windows-demo/
+release/*.zip
+tools/windows-demo-launcher/artifacts/

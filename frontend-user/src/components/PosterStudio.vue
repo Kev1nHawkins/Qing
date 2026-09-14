@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import MediaImage from '@/components/MediaImage.vue'
 import { api } from '@/services/api'
+import { posterCreationSession } from '@/services/creationSession'
 import type { Creation, CreationTemplate } from '@/types'
 
 const props = defineProps<{
@@ -30,22 +31,22 @@ const modeLabels: Record<string, string> = {
   MOCK_TEMPLATE: '文化主题海报',
   UNKNOWN: '文化共创作品',
 }
-const selectedTemplateCode = ref('')
+const selectedTemplateCode = toRef(posterCreationSession, 'selectedTemplateCode')
 const selectedTemplate = computed(
   () => props.templates.find(item => item.code === selectedTemplateCode.value),
 )
 const schema = computed(() => selectedTemplate.value?.options_schema || fallbackSchema)
-const choices = reactive<Record<string, string>>({})
+const choices = posterCreationSession.choices
 const selectionSummary = computed(() =>
   Object.keys(schema.value).map(key => choices[key]).filter(Boolean).join(' × '),
 )
-const creation = ref<Creation | null>(null)
-const generating = ref(false)
-const feedback = ref('')
-const feedbackKind = ref<'info' | 'success' | 'error'>('info')
+const creation = toRef(posterCreationSession, 'creation')
+const generating = toRef(posterCreationSession, 'generating')
+const feedback = toRef(posterCreationSession, 'feedback')
+const feedbackKind = toRef(posterCreationSession, 'feedbackKind')
 const saveFeedback = ref('')
 const savingImage = ref(false)
-watch(generating, value => emit('busyChange', value))
+watch(generating, value => emit('busyChange', value), { immediate: true })
 const isAuthenticated = computed(() => Boolean(localStorage.getItem('accessToken')))
 const isMobileDevice = computed(() => {
   if (typeof navigator === 'undefined') return false
@@ -82,8 +83,6 @@ watch(
   [() => props.templates, () => props.initialTemplateCode],
   ([templates, requestedCode]) => {
     if (!templates.length) {
-      selectedTemplateCode.value = ''
-      creation.value = null
       return
     }
     const requested = templates.find(item => item.code === requestedCode)

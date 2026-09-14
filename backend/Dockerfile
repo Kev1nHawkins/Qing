@@ -14,7 +14,7 @@ COPY requirements.runtime.txt .
 RUN pip install --no-cache-dir -r requirements.runtime.txt
 
 COPY . .
-RUN chmod +x /app/scripts/entrypoint.sh
+RUN chmod +x /app/scripts/entrypoint.sh /app/scripts/demo-entrypoint.sh
 
 EXPOSE 8000
 CMD ["/app/scripts/entrypoint.sh"]

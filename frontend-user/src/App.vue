@@ -53,7 +53,7 @@ onMounted(restoreSession)
       </nav>
       <div class="account-actions">
         <template v-if="auth.user">
-          <RouterLink class="account-user" to="/profile">
+          <RouterLink class="account-user" to="/points-shop" aria-label="打开积分商店">
             <strong>{{ auth.user.nickname }}</strong>
             <small>{{ auth.user.points_total }} 积分</small>
           </RouterLink>

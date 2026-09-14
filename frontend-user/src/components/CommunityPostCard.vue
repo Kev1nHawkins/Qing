@@ -1,15 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import CommunityIcon from '@/components/CommunityIcon.vue'
 import MediaImage from '@/components/MediaImage.vue'
 import type { CommunityPost } from '@/types/community'
 
-defineProps<{
+const props = defineProps<{
   post: CommunityPost
   featured?: boolean
   liked?: boolean
   favorited?: boolean
   busy?: boolean
 }>()
+
+const mediaUrls = computed(() => {
+  if (props.post.image_urls?.length) return props.post.image_urls.slice(0, 6)
+  const fallback = props.post.cover_image_url || props.post.creation_preview_url
+  return fallback ? [fallback] : []
+})
 
 defineEmits<{
   like: [post: CommunityPost]
@@ -60,13 +67,16 @@ function formatTime(value: string) {
       </span>
     </header>
 
-    <div class="post-body" :class="{ 'post-body--with-media': featured && (post.cover_image_url || post.creation_preview_url) }">
-      <MediaImage
-        v-if="post.cover_image_url || post.creation_preview_url"
-        class="post-cover"
-        :src="post.cover_image_url || post.creation_preview_url || ''"
-        :alt="post.title"
-      />
+    <div class="post-body" :class="{ 'post-body--with-media': featured && mediaUrls.length }">
+      <div v-if="mediaUrls.length" class="post-media-grid" :class="`post-media-grid--${Math.min(mediaUrls.length, 4)}`">
+        <MediaImage
+          v-for="(url, index) in mediaUrls"
+          :key="url"
+          class="post-cover"
+          :src="url"
+          :alt="`${post.title} · 图片 ${index + 1}`"
+        />
+      </div>
       <div class="post-copy">
         <h2>{{ post.title }}</h2>
         <p>{{ post.content }}</p>

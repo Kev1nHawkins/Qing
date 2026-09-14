@@ -11,6 +11,7 @@ export interface CommunityPost {
   title: string
   content: string
   cover_image_url?: string | null
+  image_urls?: string[]
   status: string
   like_count: number
   comment_count: number
@@ -58,6 +59,7 @@ export interface PublishPostPayload {
   culture_item_id: number | null
   creation_id: number | null
   cover_image_url: string | null
+  image_urls: string[]
   tags: string[]
 }
 
