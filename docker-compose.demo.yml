@@ -1,0 +1,73 @@
+name: lingchao-demo
+
+services:
+  mysql:
+    image: mysql:8.4
+    pull_policy: never
+    container_name: lingchao-demo-mysql
+    ports: !override
+      - "3307:3306"
+    volumes: !override
+      - lingchao_demo_mysql_data:/var/lib/mysql
+    healthcheck:
+      # Force TCP: MySQL's temporary initialization server only exposes a socket.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  backend:
+    image: lingchao/backend:demo
+    pull_policy: never
+    build: !reset null
+    container_name: lingchao-demo-backend
+    command: ["/app/scripts/demo-entrypoint.sh"]
+    environment:
+      ENVIRONMENT: demo
+      DEBUG: "false"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-DemoAdmin123!}
+      SMS_MODE: demo
+      LLM_PROVIDER: mock
+      DEEPSEEK_API_KEY: ""
+      IMAGE_GENERATOR_PROVIDER: mock
+      ZHIPU_API_KEY: ""
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174
+    ports: !override
+      - "8000:8000"
+    volumes: !override
+      - lingchao_demo_uploads:/app/uploads
+
+  frontend-user:
+    image: lingchao/frontend-user:demo
+    pull_policy: never
+    build: !reset null
+    container_name: lingchao-demo-frontend-user
+    environment:
+      VITE_API_BASE_URL: /api/v1
+      VITE_PROXY_TARGET: http://backend:8000
+      VITE_AMAP_KEY: ""
+      VITE_AMAP_SECURITY_CODE: ""
+    ports: !override
+      - "5173:5173"
+    volumes: !reset []
+
+  frontend-admin:
+    image: lingchao/frontend-admin:demo
+    pull_policy: never
+    build: !reset null
+    container_name: lingchao-demo-frontend-admin
+    environment:
+      VITE_API_BASE_URL: /api/v1
+      VITE_PROXY_TARGET: http://backend:8000
+    ports: !override
+      - "5174:5174"
+    volumes: !reset []
+
+volumes:
+  lingchao_demo_mysql_data:
+    name: lingchao_windows_demo_mysql_data
+  lingchao_demo_uploads:
+    name: lingchao_windows_demo_uploads
