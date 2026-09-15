@@ -19,4 +19,4 @@ Docker Desktop 已安装
 
 【提示】
 首次启动需要导入本地 Docker 镜像，可能需要数分钟，不需要访问 Docker Hub。
-如启动失败，请将 launcher-logs 文件夹中的日志交给项目组。
+如启动失败，请将“%LOCALAPPDATA%\LingchaoCoCreateDemo\launcher-logs”文件夹中的日志交给项目组。

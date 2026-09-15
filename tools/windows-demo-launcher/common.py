@@ -6,6 +6,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -25,6 +26,27 @@ def base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parents[2]
+
+
+def state_dir() -> Path:
+    """Return a per-user writable directory even when the package is read-only."""
+    candidates: list[Path] = []
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        candidates.append(Path(local_app_data) / "LingchaoCoCreateDemo")
+    candidates.append(Path(tempfile.gettempdir()) / "LingchaoCoCreateDemo")
+
+    errors: list[str] = []
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            probe = candidate / ".write-test"
+            probe.write_text("ok", encoding="ascii")
+            probe.unlink(missing_ok=True)
+            return candidate
+        except OSError as exc:
+            errors.append(f"{candidate}: {exc}")
+    raise RuntimeError("无法创建用户运行目录：" + "；".join(errors))
 
 
 def configure_console() -> None:
@@ -132,7 +154,7 @@ def ensure_images(docker: str, root: Path) -> None:
 
 
 def ensure_runtime_env(root: Path) -> Path:
-    runtime = root / ".env.demo.runtime"
+    runtime = state_dir() / ".env.demo.runtime"
     if runtime.is_file():
         return runtime
     template = root / ".env.demo.example"
@@ -151,7 +173,7 @@ def compose_command(docker: str, root: Path, *arguments: str) -> list[str]:
         if not path.is_file():
             raise RuntimeError(f"缺少演示运行文件：{path}")
         command.extend(["-f", str(path)])
-    command.extend(["--env-file", str(root / ".env.demo.runtime")])
+    command.extend(["--env-file", str(ensure_runtime_env(root))])
     command.extend(arguments)
     return command
 
@@ -194,7 +216,7 @@ def wait_for_services(docker: str, root: Path, timeout_seconds: int = 180) -> tu
 
 
 def write_failure_logs(docker: str, root: Path) -> Path:
-    log_dir = root / "launcher-logs"
+    log_dir = state_dir() / "launcher-logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     destination = log_dir / f"startup-failure-{stamp}.log"
